@@ -1,6 +1,6 @@
 # Spiraling Down
 
-A Minetest Game for the 2022 Minetest Game Jam.
+A Minetest Game for the 2022 Minetest Peanutbutter Jam.
 
 ## License
 
