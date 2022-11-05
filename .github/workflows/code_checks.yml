@@ -1,0 +1,31 @@
+name: code_checks
+
+on: [push, pull_request]
+
+jobs:
+
+  check_format:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: JohnnyMorganz/stylua-action@v1
+      with:
+        version: 0.15.1
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --check .
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: setup 
+      run: |
+        sudo apt install luarocks -qyy
+        sudo luarocks install luacheck
+    - name: lint
+      run: |
+        for f in mods/*; do luacheck "$f" --config "$f/.luacheckrc"; done
