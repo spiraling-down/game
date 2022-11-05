@@ -1,2 +1,1 @@
-local include = modlib.mod.include
-include("gen")
+modlib.mod.require("gen")

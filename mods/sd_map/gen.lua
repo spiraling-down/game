@@ -1,113 +1,114 @@
----
----Simple perlin noise mapgen with caverns and customizable layers of stone as you go deeper
----
+local math_min, math_floor = math.min, math.floor
 
---
---Ores and lava are TODO
---
+local modname = minetest.get_current_modname()
 
-local transition_size = 30
+modlib.mod.require("nodes")
 
-local surface_node = "default:dirt" --obviously replace with correct node
-
---IMPORTANT!!!
---Stone layers MUST be given in order of deepest to shallowest
-local stone_layers = {
+local layers = {
+	-- Implicit: Air
 	{
-		height = -1000000, --basically -inf
-		name = "default:gravel",
+		y_transition = 20, -- where the transition starts
+		y_top = 10, -- where the layer starts
+		nodename = "granite_regular_1",
 	},
 	{
-		height = -200,
-		name = "default:tree",
+		y_transition = 0,
+		y_top = -10,
+		nodename = "basalt_regular_1",
 	},
 	{
-		height = -150,
-		name = "default:steelblock",
-	},
-	{
-		height = -100,
-		name = "default:goldblock",
-	},
-	{
-		height = -50,
-		name = "default:stone",
+		y_transition = -20,
+		y_top = -30,
+		nodename = "basalt_regular_2",
 	},
 }
 
-local lavas = {}
+for _, layer in ipairs(layers) do
+	-- Cache content IDs
+	layer.cid = minetest.get_content_id(modname .. ":" .. layer.nodename)
+end
 
-local ores = {}
-minetest.register_on_mods_loaded(function()
-	for i, v in pairs(stone_layers) do
-		v.content_id = minetest.get_content_id(v.name)
+-- HACK Minetest does not allow noise creation at load time it seems
+local noises_created = false
+local function create_noises()
+	if noises_created then
+		return
 	end
-end)
+	for _, layer in ipairs(layers) do
+		-- Each transition between two layers needs its own noise
+		layer.noise = assert(minetest.get_perlin({
+			offset = 0,
+			scale = layer.y_transition - layer.y_top,
+			spread = vector.new(50, 50, 50),
+			seed = 42,
+			octaves = 5,
+			persistence = 0.5,
+			lacunarity = 2.0,
+		}))
+	end
+	noises_created = true
+end
 
-minetest.register_on_generated(function(min, max, seed)
-	local surface_id = minetest.get_content_id(surface_node)
+minetest.register_on_generated(function(minp, maxp)
+	local y_top, y_bottom = maxp.y, minp.y
 
-	local surface_scalar = 10 --how tall the hills are
-	local surface_noise = minetest.get_perlin({
-		offset = 0,
-		scale = 1,
-		spread = { x = 50, y = 50, z = 50 },
-		seed = 1,
-		octaves = 5,
-		persistence = 0.5,
-		lacunarity = 2.0,
-	})
+	if layers[1].y_transition < y_bottom then
+		return -- only air
+	end
 
-	local cavern_scalar = 10
-	local cavern_rare = 1 --The lua api said that noise ranges from -2 to 2, so setting this to 0 means the map is 50% cavern, 1 means that map is 25% cavern, 2 means that map is 0% cavern
-	local cavern_noise = minetest.get_perlin({
-		offset = 0,
-		scale = 1,
-		spread = { x = 50, y = 50, z = 50 },
-		seed = 2,
-		octaves = 5,
-		persistence = 0.5,
-		lacunarity = 2.0,
-	})
+	create_noises() -- lazily create noises (ahead-of-time is not possible)
 
-	local ore_scalar = 10
-	local ore_rare = 1
+	-- Read
+	local vmanip = minetest.get_mapgen_object("voxelmanip")
+	local emin, emax = vmanip:get_emerged_area()
+	local varea = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
+	local ystride, zstride = varea.ystride, varea.zstride
+	local data = vmanip:get_data()
+	assert(#data ~= 0)
 
-	local ore_noise = minetest.get_perlin({
-		offset = 0,
-		scale = 1,
-		spread = { x = 50, y = 50, z = 50 },
-		seed = 2,
-		octaves = 5,
-		persistence = 0.5,
-		lacunarity = 2.0,
-	})
+	-- Determine the slice of layers applying to this mapblock using two linear searches:
 
-	local vm = minetest.get_mapgen_object("voxelmanip")
-	local emin, emax = vm:read_from_map(min, max)
-	local va = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
-	local data = vm:get_data()
-	for z = min.z, max.z do
-		for y = min.y, max.y do
-			for x = min.x, max.x do
-				local idx = va:index(x, y, z)
-				--Is this pos underground?
-				if y < surface_noise:get_2d({ x = x, y = z }) * surface_scalar then
-					--Wait! only add a block if you are not in a cavern
-					if cavern_noise:get_3d({ x = x, y = y, z = z }) * cavern_scalar < cavern_rare * cavern_scalar then
-						--find out what layer we are in
-						for i, stone in ipairs(stone_layers) do
-							if y - stone.height > surface_noise:get_3d({ x = x, y = y, z = z }) * transition_size then
-								data[idx] = stone.content_id
-							end
-						end
-					end
-				elseif y - surface_noise:get_2d({ x = x, y = z }) * surface_scalar < 1 then --If we are one block above the surface, then add the surface node
-					data[idx] = surface_id
+	-- Find the first layer; it is guaranteed that there is at least one layer
+	local min_layer_idx = 1
+	while min_layer_idx < #layers and layers[min_layer_idx + 1].y_transition >= y_top do
+		min_layer_idx = min_layer_idx + 1
+	end
+
+	-- Find the last layer
+	local max_layer_idx = min_layer_idx
+	while max_layer_idx < #layers and layers[max_layer_idx + 1].y_transition >= y_bottom do
+		max_layer_idx = max_layer_idx + 1
+	end
+
+	-- Generate map: Loop over nodes in Z-X-Y order;
+	-- this is not optimal for cache locality (Z-Y-X would be optimal),
+	-- but it is required to minimize expensive perlin noise calls
+	local z_index = varea:indexp(minp)
+	local xz_point = { x = 0, y = 0 }
+	for z = minp.z, maxp.z do
+		xz_point.y = z
+		local x_index = z_index
+		for x = minp.x, maxp.x do
+			xz_point.x = x
+			local y_index = x_index
+			-- Iterate through layers from lowest to highest
+			local bottom = y_bottom
+			for layer_idx = max_layer_idx, min_layer_idx, -1 do
+				local layer = layers[layer_idx]
+				local cid = layer.cid
+				local randomized_y_top = math_floor(layer.y_top + layer.noise:get_2d(xz_point))
+				for _ = bottom, math_min(y_top, randomized_y_top) do
+					data[y_index] = cid
+					y_index = y_index + ystride -- y++
 				end
+				bottom = randomized_y_top + 1
 			end
+			x_index = x_index + 1
 		end
+		z_index = z_index + zstride
 	end
-	vm:set_data(data)
-	vm:write_to_map()
+
+	-- Write
+	vmanip:set_data(data)
+	vmanip:write_to_map()
 end)
