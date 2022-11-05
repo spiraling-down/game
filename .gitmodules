@@ -1,0 +1,3 @@
+[submodule "mods/modlib"]
+	path = mods/modlib
+	url = https://github.com/appgurueu/modlib.git
