@@ -1,3 +1,5 @@
+modlib.mod.require("crumbling")
+
 local modname = minetest.get_current_modname()
 
 local nodes = {
@@ -67,16 +69,21 @@ local nodes = {
 	},
 }
 
+-- Recursively register the tree of nodes; each node gets all its attributes as groups
+local groups = {}
 local function register_nodes(basename, variants)
 	if type(variants) == "table" then
 		for variant, subvariants in pairs(variants) do
+			groups[variant] = 1
 			register_nodes(basename .. variant .. "_", subvariants)
+			groups[variant] = nil
 		end
 		return
 	end
 	for variant = 1, variants do
 		minetest.register_node(("%s:%s%d"):format(modname, basename, variant), {
 			tiles = { ("%s_%s%d.png"):format(modname, basename, variant) },
+			groups = table.copy(groups),
 		})
 	end
 end
