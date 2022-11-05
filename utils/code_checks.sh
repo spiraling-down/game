@@ -1,2 +1,2 @@
 stylua --check mods
-for f in mods/*; do luacheck "$f" --config "$f/.luacheckrc"; done
+for f in mods/*; do if [ -f "$f/.luacheckrc" ]; then luacheck "$f" --config "$f/.luacheckrc"; fi done
