@@ -96,12 +96,19 @@ minetest.register_on_generated(function(minp, maxp)
 			for layer_idx = max_layer_idx, min_layer_idx, -1 do
 				local layer = layers[layer_idx]
 				local cid = layer.cid
-				local randomized_y_top = math_floor(layer.y_top + layer.noise:get_2d(xz_point))
-				for _ = bottom, math_min(y_top, randomized_y_top) do
+				local top
+				if layer_idx > 1 and layer_idx == min_layer_idx then
+					-- The first layer of this block must go to the top unless the layer above it is the implicit air layer
+					top = y_top
+				else
+					-- Randomize transitions between layers using perlin noise
+					top = math_min(y_top, math_floor(layer.y_top + layer.noise:get_2d(xz_point)))
+				end
+				for _ = bottom, top do
 					data[y_index] = cid
 					y_index = y_index + ystride -- y++
 				end
-				bottom = randomized_y_top + 1
+				bottom = top + 1
 			end
 			x_index = x_index + 1
 		end
