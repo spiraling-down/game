@@ -1,4 +1,4 @@
-local math_min, math_floor = math.min, math.floor
+local math_min, math_max, math_floor = math.min, math.max, math.floor
 
 local modname = minetest.get_current_modname()
 
@@ -53,8 +53,23 @@ end
 function minetest.get_spawn_level(x, z)
 	create_noises()
 	local top_layer = layers[1]
-	return math_floor(top_layer.y_top + top_layer.noise:get_2d({ x = x, y = z }))
+	return math_max(top_layer.y_top, math_floor(top_layer.y_top + top_layer.noise:get_2d({ x = x, y = z }))) + 0.5
 end
+
+--Spawn at 0,0
+function reposition_player_for_spawn(player)
+	local correct_pos = { x = 0, y = minetest.get_spawn_level(0, 0), z = 0 }
+	player:set_pos(correct_pos)
+end
+
+minetest.register_on_respawnplayer(function(player)
+	reposition_player_for_spawn(player)
+	return true
+end)
+
+minetest.register_on_newplayer(function(player)
+	reposition_player_for_spawn(player)
+end)
 
 minetest.register_on_generated(function(minp, maxp)
 	local y_top, y_bottom = maxp.y, minp.y
