@@ -4,68 +4,51 @@ local modname = minetest.get_current_modname()
 
 local nodes = {
 	basalt = {
-		regular = 4,
+		_ = 4,
 		cracked = 2,
 		crumbling = 2,
-		granite = {
-			regular = 4,
-		},
-		lava = {
-			regular = 4,
-		},
+		granite = 4,
+		lava = 4,
 	},
-	carbon = {
-		regular = 4,
-	},
+	carbon = 4,
 	granite = {
-		regular = 4,
+		_ = 4,
 		cracked = 2,
 		crumbling = 2,
-		basalt = {
-			regular = 4,
-		},
-		dark = {
-			regular = 4,
-		},
-		frozen = {
-			regular = 4,
+		basalt = 4,
+		dark = 4,
+		semifrozen = {
+			_ = 4,
 			cracked = 2,
 			crumbling = 2,
-			subdued = {
-				regular = 4,
-			},
+		},
+		frozen = {
+			_ = 4,
+			cracked = 2,
+			crumbling = 2,
+			subdued = 4,
 		},
 	},
 	lava = {
-		regular = 4,
-		basalt = {
-			regular = 4,
-		},
+		_ = 4,
+		basalt = 4,
 	},
 	limestone = {
-		regular = 4,
+		_ = 4,
 		cracked = 2,
 		crumbling = 2,
 	},
 	obsidian = {
-		regular = 4,
+		_ = 4,
 		cracked = 2,
 		crumbling = 2,
 	},
 	sand = {
-		regular = 4,
-		basalt = {
-			regular = 4,
-		},
-		frozen = {
-			regular = 4,
-		},
-		granite = {
-			regular = 4,
-		},
-		red = {
-			regular = 4,
-		},
+		_ = 4,
+		basalt = 4,
+		frozen = 4,
+		granite = 4,
+		red = 4,
 	},
 }
 
@@ -75,7 +58,11 @@ local function register_nodes(basename, variants)
 	if type(variants) == "table" then
 		for variant, subvariants in pairs(variants) do
 			groups[variant] = 1
-			register_nodes(basename .. variant .. "_", subvariants)
+			local name = basename
+			if variant ~= "_" then
+				name = name .. variant .. "_"
+			end
+			register_nodes(name, subvariants)
 			groups[variant] = nil
 		end
 		return
