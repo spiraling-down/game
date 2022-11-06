@@ -1,31 +1,34 @@
-local math_min, math_max, math_floor = math.min, math.max, math.floor
+local math_min, math_max, math_floor, math_random = math.min, math.max, math.floor, math.random
 
 local modname = minetest.get_current_modname()
 
-modlib.mod.require("nodes")
+local nodes = modlib.mod.require("nodes")
 
 local layers = {
 	-- Implicit: Air
 	{
 		y_transition = 20, -- where the transition starts
 		y_top = 10, -- where the layer starts
-		nodename = "granite_1", -- TODO randomize
+		nodename = "granite",
 	},
 	{
 		y_transition = 0,
 		y_top = -10,
-		nodename = "basalt_1",
+		nodename = "basalt",
 	},
 	{
 		y_transition = -20,
 		y_top = -30,
-		nodename = "basalt_2",
+		nodename = "limestone",
 	},
 }
 
 for _, layer in ipairs(layers) do
 	-- Cache content IDs
-	layer.cid = minetest.get_content_id(modname .. ":" .. layer.nodename)
+	layer.cids = {}
+	for variant = 1, nodes[layer.nodename]._ do
+		layer.cids[variant] = minetest.get_content_id(("%s:%s_%d"):format(modname, layer.nodename, variant))
+	end
 end
 
 -- HACK Minetest does not allow noise creation at load time it seems
@@ -103,7 +106,7 @@ minetest.register_on_generated(function(minp, maxp)
 			local bottom = y_bottom
 			for layer_idx = max_layer_idx, min_layer_idx, -1 do
 				local layer = layers[layer_idx]
-				local cid = layer.cid
+				local cids = layer.cids
 				local top
 				if layer_idx > 1 and layer_idx == min_layer_idx then
 					-- The first layer of this block must go to the top unless the layer above it is the implicit air layer
@@ -113,7 +116,9 @@ minetest.register_on_generated(function(minp, maxp)
 					top = math_min(y_top, math_floor(layer.y_top + layer.noise:get_2d(xz_point)))
 				end
 				for _ = bottom, top do
-					data[y_index] = cid
+					-- NOTE: `math.random` is used because it is by far the fastest RNG;
+					-- determinism is not needed when randomizing nodes
+					data[y_index] = cids[math_random(1, #cids)]
 					y_index = y_index + ystride -- y++
 				end
 				bottom = top + 1

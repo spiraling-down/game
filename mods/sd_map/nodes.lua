@@ -76,3 +76,5 @@ local function register_nodes(basename, variants)
 end
 
 register_nodes("", nodes)
+
+return nodes
