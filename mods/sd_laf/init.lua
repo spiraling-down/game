@@ -1,3 +1,10 @@
+laf = {
+	colors = {
+		text = modlib.minetest.colorspec.from_string("#DFE6D4"),
+	},
+	fontsize = 1.25,
+}
+
 -- Build the formspec prepend
 
 local formspec_prepend
@@ -31,7 +38,7 @@ do
 	)
 
 	formspec_prepend = ("background9[[0,0;8,4;%s;true;%d]"):format(sliced_bg, slice_size)
-		.. "style_type[*;font=mono;fontsize=*1.25;textcolor=#DFE6D4]"
+		.. ("style_type[*;font=mono;fontsize=*%f;textcolor=%s]"):format(laf.fontsize, laf.colors.text:to_string())
 		.. ("style_type[button;border=false;bgimg=%s;bgimg_middle=%d]"):format(sliced_bg, slice_size)
 		.. ("style[%s;border=false;bgimg=%s]"):format(btn_names, minetest.formspec_escape(btn_bg_scaled))
 end
