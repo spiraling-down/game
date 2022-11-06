@@ -22,20 +22,21 @@ minetest.register_on_joinplayer(function(player)
 		scale = 2,
 	})
 	player:set_sun({
-		sunrise_visible = false, --I have this set to false because the sunrise horizon texture seems buggy with the type="plain" sky
+		-- Set to false because the sunrise horizon texture seems buggy with the type="plain" sky
+		sunrise_visible = false,
 	})
 end)
 
---Animated sun texture:
+-- Animated sun texture:
 --
---Animation frames are in the order:
---sun1.png
---sun2.png
---sun3.png
---etc..
+-- Animation frames are in the order:
+-- sun1.png
+-- sun2.png
+-- sun3.png
+-- etc..
 
-local max_frames = 7 --number of frames
-local framerate = 5 --frames per second
+local max_frames = 7 -- number of frames
+local framerate = 5 -- frames per second
 
 local time = 0
 local frame = 1
