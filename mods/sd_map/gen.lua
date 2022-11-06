@@ -9,7 +9,7 @@ local layers = {
 	{
 		y_transition = 20, -- where the transition starts
 		y_top = 10, -- where the layer starts
-		nodename = "granite_regular_1",
+		nodename = "granite_regular_1", -- TODO randomize
 	},
 	{
 		y_transition = 0,
