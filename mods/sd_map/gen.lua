@@ -29,6 +29,7 @@ for _, layer in ipairs(layers) do
 end
 
 -- HACK Minetest does not allow noise creation at load time it seems
+-- lazily creates noises (ahead-of-time is not possible)
 local noises_created = false
 local function create_noises()
 	if noises_created then
@@ -49,6 +50,12 @@ local function create_noises()
 	noises_created = true
 end
 
+function minetest.get_spawn_level(x, z)
+	create_noises()
+	local top_layer = layers[1]
+	return math_floor(top_layer.y_top + top_layer.noise:get_2d({ x = x, y = z }))
+end
+
 minetest.register_on_generated(function(minp, maxp)
 	local y_top, y_bottom = maxp.y, minp.y
 
@@ -56,7 +63,7 @@ minetest.register_on_generated(function(minp, maxp)
 		return -- only air
 	end
 
-	create_noises() -- lazily create noises (ahead-of-time is not possible)
+	create_noises()
 
 	-- Read
 	local vmanip = minetest.get_mapgen_object("voxelmanip")
