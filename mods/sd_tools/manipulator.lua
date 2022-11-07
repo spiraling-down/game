@@ -1,4 +1,9 @@
 local modname = minetest.get_current_modname()
+local manipulator = {
+	itemname = modname .. ":manipulator",
+	uses = 50,
+	recharge_time = 60,
+}
 local scaffolding_nodename = modname .. ":scaffolding"
 local frame_width = 1 / 8
 
@@ -48,3 +53,34 @@ minetest.register_node(scaffolding_nodename, {
 	walkable = false,
 	climbable = true,
 })
+
+local max_wear = 65535
+local wear_per_use = math.floor(max_wear / manipulator.uses)
+minetest.register_tool(manipulator.itemname, {
+	description = "Manipulator",
+	on_place = function(itemstack, placer, pointed_thing)
+		if itemstack:get_wear() + wear_per_use > max_wear then
+			return
+		end
+		itemstack:add_wear(wear_per_use)
+		minetest.item_place(ItemStack(scaffolding_nodename), placer, pointed_thing)
+		return itemstack
+	end,
+})
+
+-- Recharge if the player is holding the manipulator
+local recharge_catchup = {} -- catchup for fractional wear which adds up
+minetest.register_globalstep(function(dtime)
+	for player in modlib.minetest.connected_players() do
+		local name = player:get_player_name()
+		local wielded_item = player:get_wielded_item()
+		if wielded_item:get_name() == manipulator.itemname then
+			local recharge = dtime / manipulator.recharge_time * max_wear + (recharge_catchup[name] or 0)
+			wielded_item:add_wear(-recharge)
+			assert(player:set_wielded_item(wielded_item))
+			recharge_catchup[name] = recharge % 1
+		else
+			recharge_catchup[name] = nil
+		end
+	end
+end)
