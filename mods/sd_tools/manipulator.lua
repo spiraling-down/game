@@ -10,8 +10,10 @@ do
 	end
 	local nmn, nmx = -0.5, 0.5
 	local cmn, cmx = nmn + frame_width, nmx - frame_width
-	local center = { cmn, cmn, cmn, cmx, cmx, cmx }
-	push(center)
+	do
+		local mdn, mdx = (nmn + cmn) / 2, (nmx + cmx) / 2
+		push({ mdn, mdn, mdn, mdx, mdx, mdx })
+	end
 	local function push_xz_frame(ymn, ymx)
 		-- X
 		push({ nmn, ymn, nmn, nmx, ymx, cmn })
