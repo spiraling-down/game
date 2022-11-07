@@ -41,7 +41,7 @@ minetest.register_node(scaffolding_nodename, {
 		type = "fixed",
 		fixed = nodeboxes,
 	},
-	tiles = { { name = modname .. "_manipulator_scaffolding.png", backface_culling = false } },
+	tiles = { modname .. "_manipulator_scaffolding.png" },
 	use_texture_alpha = "clip",
 	paramtype = "light",
 	sunlight_propagates = true,
