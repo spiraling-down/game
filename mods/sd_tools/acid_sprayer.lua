@@ -26,7 +26,7 @@ local function globalstep(dtime)
 					pt.ref:punch(droplet.player, 1, {
 						full_punch_interval = 1,
 						damage_groups = { acid = 1 },
-					}, prev_vel:direction())
+					}, prev_vel:normalize())
 				end
 			else
 				remove = true
