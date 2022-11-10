@@ -88,33 +88,6 @@ local function add_droplet(player, pos, velocity, lifetime)
 	})
 end
 
--- Constructs an orthonormal base given a normal vector of a 2d plane
-local construct_orthonormal_base
-do
-	-- Lookup tables for other components given a least significant component
-	local abs = math.abs
-	local c1 = { x = "y", y = "z", z = "x" }
-	local c2 = { x = "z", y = "x", z = "y" }
-	function construct_orthonormal_base(normal)
-		local lsc = "x" -- least significant component
-		for c, val in next, normal, lsc do
-			if abs(val) < abs(normal[lsc]) then
-				lsc = c
-			end
-		end
-		local msc1, msc2 = c1[lsc], c2[lsc]
-		local b1 = normal:copy()
-		b1[lsc] = 0 -- zero the least significant component
-		-- Swap most significant components & flip one.
-		-- Assuming z is the lsc: n * b1 = nx * ny + ny * -nx = 0
-		b1[msc1], b1[msc2] = b1[msc2], -b1[msc1]
-		b1:normalize()
-		-- Now we may find a second orthogonal vector using the cross product.
-		local b2 = b1:cross(normal)
-		return b1, b2
-	end
-end
-
 local barrel_length = 1
 local barrel_radius = 0.1
 local spread_radius = 0.2 -- relative to one
@@ -125,7 +98,7 @@ local function spray_droplets(player, dtime)
 	local eye_pos = vector.offset(player:get_pos(), 0, player:get_properties().eye_height, 0)
 	local dir = player:get_look_dir()
 	local barrel_end_pos = eye_pos:add(dir:multiply(barrel_length))
-	local b1, b2 = construct_orthonormal_base(dir)
+	local b1, b2 = dir:construct_orthonormal_base()
 	local function offset_from_ray(radius)
 		local angle = math.random() * 2 * math.pi
 		local x, y = math.cos(angle), math.sin(angle) -- in 2d plane space, not in world space

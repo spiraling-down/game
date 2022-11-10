@@ -22,6 +22,7 @@ local function crumble(pos)
 	minetest.add_particlespawner({
 		amount = math.random(32, 42),
 		time = time,
+		size = 0, -- randomize sizes
 		collisiondetection = false,
 		glow = glow,
 		node = node,

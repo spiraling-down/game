@@ -1,4 +1,11 @@
-local math_min, math_max, math_floor, math_random = math.min, math.max, math.floor, math.random
+local assert, ipairs, pairs = assert, ipairs, pairs
+
+local math_huge, math_min, math_max, math_floor, math_ceil, math_random, math_randomseed =
+	math.huge, math.min, math.max, math.floor, math.ceil, math.random, math.randomseed
+
+local vec = vector.new
+
+local c_air = minetest.CONTENT_AIR
 
 local modname = minetest.get_current_modname()
 
@@ -44,7 +51,7 @@ local function create_noises()
 		layer.noise = assert(minetest.get_perlin({
 			offset = 0,
 			scale = layer.y_transition - layer.y_top,
-			spread = vector.new(50, 50, 50),
+			spread = vec(50, 50, 50),
 			seed = 42,
 			octaves = 5,
 			persistence = 0.5,
@@ -54,48 +61,41 @@ local function create_noises()
 	noises_created = true
 end
 
+-- TODO this doesn't take tunnels & caves intersecting the top layer into account
 function minetest.get_spawn_level(x, z)
 	create_noises()
 	local top_layer = layers[1]
 	return math_max(top_layer.y_top, math_floor(top_layer.y_top + top_layer.noise:get_2d({ x = x, y = z }))) + 0.5
 end
 
--- One cave per "chunk" (which has nothing to do with mapblock size)
-local chunk_size = 40
-local cave_dimensions = vector.new(10, 3, 10)
-local get_minp_from_pos = function(pos)
-	return vector.floor(pos / chunk_size) * chunk_size
-end
-
-local vector_componentwise_divide = function(v1, v2)
-	return vector.new(v1.x / v2.x, v1.y / v2.y, v1.z / v2.z)
-end
-
-local get_nearest_cave = function(pos)
-	local minp = get_minp_from_pos(pos)
-	--Poor Man's Hashing Function
-	math.randomseed(minp.x + minp.y + minp.z)
-	local cave_pos = vector.new(
-		math.random(minp.x + cave_dimensions.x, minp.x + chunk_size - cave_dimensions.x),
-		math.random(minp.y + cave_dimensions.y, minp.y + chunk_size - cave_dimensions.y),
-		math.random(minp.z + cave_dimensions.z, minp.z + chunk_size - cave_dimensions.z)
-	)
-	return cave_pos
-end
-
-local get_distance_to_nearest_cave = function(pos)
-	return vector.length(vector_componentwise_divide(get_nearest_cave(pos) - pos, vector.normalize(cave_dimensions)), 0)
-end
-
 local tunnel_radius = 2
-local get_distance_from_tunnel = function(pos, tunneldir, tunnelstart)
-	local offset = pos - tunnelstart
-	if vector.dot(tunneldir, offset) < 0 then
-		return tunnel_radius + 1000 --if you are behind the start of the tunnel, don't add a tunnel
-	else
-		return vector.dot(vector.normalize(vector.cross(vector.cross(tunneldir, offset), tunneldir)), offset)
-	end
+local min_radii, max_radii = vec(10, 5, 10), vec(20, 8, 20)
+local chunk_size = 40 -- TODO this is not optimal due to offsets
+local min_caves_per_chunk = 2
+local max_caves_per_chunk = 4
+
+local function seed_random(minp)
+	local seed = minp.x * 2 ^ 10 + minp.y * 2 ^ 5 + minp.z
+	math_randomseed(seed)
 end
+
+-- Gets the caves for a chunk with the given minp
+--! This changes the current global randomseed
+local get_caves = modlib.func.memoize(function(minp)
+	seed_random(minp)
+	local maxp = minp:add(chunk_size)
+
+	local cnt = math_floor(min_caves_per_chunk + math_random() * (max_caves_per_chunk - min_caves_per_chunk) + 0.5)
+	local caves = {}
+	for i = 1, cnt do
+		caves[i] = {
+			center = minp:combine(maxp, math_random),
+			radii = min_radii:combine(max_radii, math_random),
+		}
+	end
+
+	return caves
+end)
 
 minetest.register_on_generated(function(minp, maxp)
 	local y_top, y_bottom = maxp.y, minp.y
@@ -107,6 +107,7 @@ minetest.register_on_generated(function(minp, maxp)
 	create_noises()
 
 	-- Read
+	local reseed = math_random(2 ^ 31 - 1) -- generate seed for reseeding
 	local vmanip = minetest.get_mapgen_object("voxelmanip")
 	local emin, emax = vmanip:get_emerged_area()
 	local varea = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
@@ -152,42 +153,10 @@ minetest.register_on_generated(function(minp, maxp)
 					-- Randomize transitions between layers using perlin noise
 					top = math_min(y_top, math_floor(layer.y_top + layer.noise:get_2d(xz_point)))
 				end
-				for y = bottom, top do
+				for _ = bottom, top do
 					-- NOTE: `math.random` is used because it is by far the fastest RNG;
 					-- determinism is not needed when randomizing nodes
 					data[y_index] = cids[math_random(1, #cids)]
-
-					local pos = vector.new(x, y, z)
-					--Create caves
-					if get_distance_to_nearest_cave(pos) < vector.length(cave_dimensions) then
-						data[y_index] = minetest.CONTENT_AIR
-					end
-
-					--Create tunnels between a couple nearby caves
-					local current_cave = get_nearest_cave(pos)
-					--Add/subtract a chunk size to find another cave.
-					local nearby_cave1 = get_nearest_cave(vector.add(pos, vector.new(chunk_size, 0, chunk_size)))
-					local nearby_cave2 = get_nearest_cave(vector.subtract(pos, vector.new(chunk_size, 0, chunk_size)))
-					local nearby_cave3 = get_nearest_cave(vector.add(pos, vector.new(chunk_size, 0, -chunk_size)))
-					local nearby_cave4 = get_nearest_cave(vector.subtract(pos, vector.new(chunk_size, 0, -chunk_size)))
-
-					local dist_tunnel1 = get_distance_from_tunnel(pos, nearby_cave1 - current_cave, current_cave)
-					if dist_tunnel1 < tunnel_radius then
-						data[y_index] = minetest.CONTENT_AIR
-					end
-					local dist_tunnel2 = get_distance_from_tunnel(pos, nearby_cave2 - current_cave, current_cave)
-					if dist_tunnel2 < tunnel_radius then
-						data[y_index] = minetest.CONTENT_AIR
-					end
-					local dist_tunnel3 = get_distance_from_tunnel(pos, nearby_cave3 - current_cave, current_cave)
-					if dist_tunnel3 < tunnel_radius then
-						data[y_index] = minetest.CONTENT_AIR
-					end
-					local dist_tunnel4 = get_distance_from_tunnel(pos, nearby_cave4 - current_cave, current_cave)
-					if dist_tunnel4 < tunnel_radius then
-						data[y_index] = minetest.CONTENT_AIR
-					end
-
 					y_index = y_index + ystride -- y++
 				end
 
@@ -195,10 +164,174 @@ minetest.register_on_generated(function(minp, maxp)
 			end
 			x_index = x_index + 1
 		end
-		z_index = z_index + zstride
+		z_index = z_index + zstride -- z++
+	end
+
+	-- NOTE: This could be used to clear spheres but would be less efficient
+	local function clear_ellipsoid(center, radii)
+		local cx, cy, cz = center.x, center.y, center.z
+		local rx, ry, rz = radii.x, radii.y, radii.z
+		-- Squared scales for computing a scaled distance
+		local sqx, sqy, sqz = 1 / (rx * rx), 1 / (ry * ry), 1 / (rz * rz)
+		-- Compute extents of the cuboid fully containing the sphere
+		local cuboid_min = center:subtract(radii):floor():combine(minp, math_max)
+		local cuboid_max = center:add(radii):ceil():combine(maxp, math_min)
+
+		local z_idx = varea:indexp(cuboid_min)
+		for relz = cuboid_min.z - cz, cuboid_max.z - cz do
+			local z_dist_sq = relz * relz * sqz
+			if z_dist_sq <= 1 then
+				local zy_idx = z_idx
+				for rely = cuboid_min.y - cy, cuboid_max.y - cy do
+					local zy_dist_sq = z_dist_sq + rely * rely * sqy
+					if zy_dist_sq <= 1 then
+						local zyx_idx = zy_idx
+						for relx = cuboid_min.x - cx, cuboid_max.x - cx do
+							local zyx_dist_sq = zy_dist_sq + relx * relx * sqx
+							if zyx_dist_sq <= 1 then -- distance was scaled such that we may check for the unit sphere
+								data[zyx_idx] = c_air -- in ellipsoid?
+							end
+							zyx_idx = zyx_idx + 1
+						end
+					end
+					zy_idx = zy_idx + ystride
+				end
+			end
+			z_idx = z_idx + zstride
+		end
+	end
+
+	local function in_bounds(pos)
+		return pos.x >= minp.x
+			and pos.y >= minp.y
+			and pos.z >= minp.z
+			and pos.x <= maxp.x
+			and pos.y <= maxp.y
+			and pos.z <= maxp.z
+	end
+
+	local function clear_tunnel(from, to, radius)
+		local radius_sq = radius * radius
+		local diff = to - from
+		local dir = diff:normalize()
+		local len = diff:length()
+		if len == 0 then
+			return false -- no tunnel
+		end
+		local b1, b2 = dir:construct_orthonormal_base() -- TODO consider localizing x, y, z
+
+		-- Clamp `from` & `to` to mapblock bounds
+
+		-- TODO deduplicate with the below clamping for `to`
+		if not in_bounds(from) then
+			local min_t = math_huge
+			for c, d in pairs(dir) do
+				d = -d
+				if d > 0 then
+					min_t = math_min(min_t, (maxp[c] - to[c]) / d)
+				elseif d < 0 then
+					min_t = math_min(min_t, (minp[c] - to[c]) / d)
+				end
+			end
+			assert(min_t < math_huge)
+			if min_t < 0 then
+				return false -- still not in bounds => tunnel is out of bounds
+			end
+			from = to - min_t * dir
+		end
+
+		if not in_bounds(to) then
+			local min_len = math_huge
+			for c, d in pairs(dir) do
+				if d > 0 then
+					min_len = math_min(min_len, (maxp[c] - from[c]) / d)
+				elseif d < 0 then
+					min_len = math_min(min_len, (minp[c] - from[c]) / d)
+				end
+			end
+			assert(min_len < math_huge)
+			if min_len < 0 then
+				return false -- still not in bounds => tunnel is out of bounds
+			end
+			len = min_len
+		end
+
+		-- NOTE: Small bias of 1e-3 to deal with precision issues
+		local step = 0.5
+		step = len / math_ceil(len / step)
+		for i = 0, len + 1e-3, step do -- walk in the tunnel direction...
+			local tunnel_slice_center = from + i * dir
+			-- Iterate over UV coordinates of the tunnel slice
+			for u = -radius, radius do
+				local u_pos = tunnel_slice_center + u * b1
+				local u_dist_sq = u * u
+				for v = -radius, radius do
+					local uv_pos = u_pos + v * b2
+					local uv_dist_sq = u_dist_sq + v * v
+					if uv_dist_sq <= radius_sq and in_bounds(uv_pos) then
+						data[varea:indexp(uv_pos:floor())] = c_air
+					end
+				end
+			end
+		end
+
+		return true
+	end
+
+	-- NOTE: subtract/add one to deal with caves of neighboring chunks, which might extend into our chunk
+	-- TODO consider throwing in a few random tunnels
+	local minchunkp = minp:divide(chunk_size):floor():subtract(1):multiply(chunk_size)
+	local maxchunkp = maxp:divide(chunk_size):ceil():add(1):multiply(chunk_size)
+	for cz = minchunkp.z, maxchunkp.z, chunk_size do
+		for cy = minchunkp.y, maxchunkp.y, chunk_size do
+			for cx = minchunkp.x, maxchunkp.x, chunk_size do
+				local cp = vec(cx, cy, cz)
+				local caves = get_caves(cp)
+				local nearby_caves = {}
+				for i = 1, #caves do
+					nearby_caves[i] = caves[i]
+				end
+				-- Loop over neighboring chunks and determine their caves
+				for nz = cz - chunk_size, cz + chunk_size, chunk_size do
+					for ny = cy - chunk_size, cy + chunk_size, chunk_size do
+						for nx = cx - chunk_size, cx + chunk_size, chunk_size do
+							if nx + ny + nz ~= 0 then
+								local ncaves = get_caves(vec(nx, ny, nz))
+								for i = 1, #ncaves do -- append all to nearby caves
+									nearby_caves[#nearby_caves + 1] = ncaves[i]
+								end
+							end
+						end
+					end
+				end
+				seed_random(cp)
+				for i = 1, #caves do
+					clear_ellipsoid(caves[i].center, caves[i].radii)
+					local cave_blacklist = { [caves[i]] = true }
+					-- Add tunnels to closest caves
+					for _ = 1, math_random(2, 4) do
+						local min_dist, closest_cave = math_huge, nil
+						for j = 1, #nearby_caves do
+							if not cave_blacklist[nearby_caves[j]] then
+								local dist = nearby_caves[j].center:distance(caves[i].center)
+								if dist < min_dist then
+									min_dist, closest_cave = dist, nearby_caves[j]
+								end
+							end
+						end
+						if not closest_cave then
+							break
+						end
+						clear_tunnel(caves[i].center, closest_cave.center, tunnel_radius)
+						cave_blacklist[closest_cave] = true
+					end
+				end
+			end
+		end
 	end
 
 	-- Write
 	vmanip:set_data(data)
 	vmanip:write_to_map()
+	math_randomseed(reseed) -- reseed the random
 end)
