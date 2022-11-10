@@ -256,6 +256,10 @@ minetest.register_on_generated(function(minp, maxp)
 			len = min_len
 		end
 
+		if len < 0.5 then
+			return false -- tunnel shorter than one node
+		end
+
 		-- NOTE: Small bias of 1e-3 to deal with precision issues
 		local step = 0.5
 		step = len / math_ceil(len / step)
