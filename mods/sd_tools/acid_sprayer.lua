@@ -140,11 +140,19 @@ local function spray_droplets(player, dtime)
 	end
 end
 
+local max_wear = 65535
+local use_duration = 2
 return register("acid_sprayer", {
 	description = "Acid Sprayer",
 	-- TODO consider only "enabling" `_on_hold` in `on_use`
-	_on_hold = function(_, user, dtime)
-		spray_droplets(user, dtime)
+	_on_hold = function(itemstack, user, dtime)
+		local wear_required = math.floor(max_wear * (dtime / use_duration))
+		local wear_left = max_wear - itemstack:get_wear()
+		if wear_required < wear_left then
+			spray_droplets(user, dtime)
+			itemstack:add_wear(wear_required)
+		end
+		return itemstack
 	end,
-	_recharge_time = 20,
+	_recharge_time = use_duration * 2,
 })
