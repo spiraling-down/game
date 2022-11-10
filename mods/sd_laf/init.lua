@@ -47,6 +47,7 @@ minetest.register_on_joinplayer(function(player)
 	player:set_formspec_prepend(formspec_prepend)
 
 	player:hud_set_flags({
+		healthbar = false, -- reimplemented in sd_hud
 		breathbar = false,
 		minimap = false,
 		minimap_radar = false,
