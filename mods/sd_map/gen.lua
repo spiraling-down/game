@@ -5,6 +5,8 @@ local math_huge, math_min, math_max, math_floor, math_ceil, math_random, math_ra
 
 local vec = vector.new
 
+local minetest_hash_node_position = minetest.hash_node_position
+
 local c_air = minetest.CONTENT_AIR
 
 local modname = minetest.get_current_modname()
@@ -75,13 +77,22 @@ local min_caves_per_chunk = 2
 local max_caves_per_chunk = 4
 
 local function seed_random(minp)
+	-- We can't use hash_node_position for this as the randomseed must fit in an int
 	local seed = minp.x * 2 ^ 10 + minp.y * 2 ^ 5 + minp.z
 	math_randomseed(seed)
 end
 
+-- NOTE: Weak keys to allow for garbage collection
+local cave_cache = setmetatable({}, { __mode = "k" })
+
 -- Gets the caves for a chunk with the given minp
 --! This changes the current global randomseed
-local get_caves = modlib.func.memoize(function(minp)
+local function get_caves(minp)
+	local hash = minetest_hash_node_position(minp)
+	if cave_cache[hash] then
+		return cave_cache[hash]
+	end
+
 	seed_random(minp)
 	local maxp = minp:add(chunk_size)
 
@@ -94,8 +105,9 @@ local get_caves = modlib.func.memoize(function(minp)
 		}
 	end
 
+	cave_cache[hash] = caves
 	return caves
-end)
+end
 
 minetest.register_on_generated(function(minp, maxp)
 	local y_top, y_bottom = maxp.y, minp.y
@@ -201,13 +213,10 @@ minetest.register_on_generated(function(minp, maxp)
 		end
 	end
 
-	local function in_bounds(pos)
-		return pos.x >= minp.x
-			and pos.y >= minp.y
-			and pos.z >= minp.z
-			and pos.x <= maxp.x
-			and pos.y <= maxp.y
-			and pos.z <= maxp.z
+	local mnpx, mnpy, mnpz = minp.x, minp.y, minp.z
+	local mxpx, mxpy, mxpz = maxp.x, maxp.y, maxp.z
+	local function in_bounds(px, py, pz)
+		return px >= mnpx and py >= mnpy and pz >= mnpz and px <= mxpx and py <= mxpy and pz <= mxpz
 	end
 
 	local function clear_tunnel(from, to, radius)
@@ -218,12 +227,14 @@ minetest.register_on_generated(function(minp, maxp)
 		if len == 0 then
 			return false -- no tunnel
 		end
-		local b1, b2 = dir:construct_orthonormal_base() -- TODO consider localizing x, y, z
+		local b1, b2 = dir:construct_orthonormal_base()
+		local b1x, b1y, b1z = b1.x, b1.y, b1.z
+		local b2x, b2y, b2z = b2.x, b2.y, b2.z
 
 		-- Clamp `from` & `to` to mapblock bounds
 
 		-- TODO deduplicate with the below clamping for `to`
-		if not in_bounds(from) then
+		if not in_bounds(from.x, from.y, from.z) then
 			local min_t = math_huge
 			for c, d in pairs(dir) do
 				d = -d
@@ -240,7 +251,7 @@ minetest.register_on_generated(function(minp, maxp)
 			from = to - min_t * dir
 		end
 
-		if not in_bounds(to) then
+		if not in_bounds(to.x, to.y, to.z) then
 			local min_len = math_huge
 			for c, d in pairs(dir) do
 				if d > 0 then
@@ -261,19 +272,21 @@ minetest.register_on_generated(function(minp, maxp)
 		end
 
 		-- NOTE: Small bias of 1e-3 to deal with precision issues
-		local step = 0.5
+		local step = 0.5 -- TODO increase
 		step = len / math_ceil(len / step)
+		local fx, fy, fz = from.x, from.y, from.z
+		local dx, dy, dz = dir.x, dir.y, dir.z
 		for i = 0, len + 1e-3, step do -- walk in the tunnel direction...
-			local tunnel_slice_center = from + i * dir
+			local tscx, tscy, tscz = fx + i * dx, fy + i * dy, fz + i * dz
 			-- Iterate over UV coordinates of the tunnel slice
 			for u = -radius, radius do
-				local u_pos = tunnel_slice_center + u * b1
+				local upx, upy, upz = tscx + u * b1x, tscy + u * b1y, tscz + u * b1z
 				local u_dist_sq = u * u
 				for v = -radius, radius do
-					local uv_pos = u_pos + v * b2
+					local uvpx, uvpy, uvpz = upx + v * b2x, upy + v * b2y, upz + v * b2z
 					local uv_dist_sq = u_dist_sq + v * v
-					if uv_dist_sq <= radius_sq and in_bounds(uv_pos) then
-						data[varea:indexp(uv_pos:floor())] = c_air
+					if uv_dist_sq <= radius_sq and in_bounds(uvpx, uvpy, uvpz) then
+						data[varea:index(math_floor(uvpx), math_floor(uvpy), math_floor(uvpz))] = c_air
 					end
 				end
 			end
