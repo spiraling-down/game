@@ -4,6 +4,15 @@ A Minetest Game for the 2022 Minetest Game Jam.
 
 ## Developing
 
+### Installation
+
+1. Enter your `games` folder
+   * Standard Linux installation: `cd ~/.minetest/games`
+2. Clone the game & enter the folder:
+   1. `git clone https://github.com/spiraling-down/game spiraling_down`
+   2. `cd spiraling_down`
+3. Initialize submodules: `git submodule update --init --recursive`
+
 ### Requirements
 
 * [StyLua](https://github.com/JohnnyMorganz/StyLua)
