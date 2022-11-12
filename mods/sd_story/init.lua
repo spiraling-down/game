@@ -69,16 +69,27 @@ local function remove_blackscreen(player)
 	data.blackscreen = nil
 end
 
--- Start with blackscreen
-minetest.register_on_newplayer(function(player)
+local function init(player)
 	local name = player:get_player_name()
 	players[name] = players[name] or {}
+end
+
+-- Start with blackscreen
+minetest.register_on_newplayer(function(player)
+	init(player)
 	add_blackscreen(player)
+end)
+
+minetest.register_on_joinplayer(init)
+
+minetest.register_on_leaveplayer(function(player)
+	players[player:get_player_name()] = nil
 end)
 
 minetest.register_globalstep(function(dtime)
 	for player in modlib.minetest.connected_players() do
 		local skip = player:get_player_control()[skip_key]
+		init(player)
 		local data = players[player:get_player_name()]
 		local text, blackscreen = data.text, data.blackscreen
 		if text then
@@ -107,13 +118,4 @@ minetest.register_globalstep(function(dtime)
 			end
 		end
 	end
-end)
-
-minetest.register_on_joinplayer(function(player)
-	local name = player:get_player_name()
-	players[name] = players[name] or {}
-end)
-
-minetest.register_on_leaveplayer(function(player)
-	players[player:get_player_name()] = nil
 end)
