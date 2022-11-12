@@ -8,7 +8,12 @@ local function init(player)
 end
 
 minetest.register_on_joinplayer(init)
-minetest.register_on_newplayer(init)
+minetest.register_on_newplayer(function(player)
+	init(player)
+	-- TODO what if this isn't persisted?
+	inv.set_count(player, "lamp", 20)
+	inv.set_count(player, "steel", 30)
+end)
 minetest.register_on_respawnplayer(init)
 
 -- TODO player appearance (mech)

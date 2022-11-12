@@ -1,6 +1,6 @@
 local modname = minetest.get_current_modname()
 
-local inv = modlib.mod.require("items")
+local inv = modlib.mod.require("inv")
 
 local function tex(texname)
 	return ("%s_%s.png"):format(modname, texname)

@@ -1,4 +1,4 @@
-local inv = {}
+inv = {}
 
 inv.max_count = 9999
 inv.registered_on_changes = {}
