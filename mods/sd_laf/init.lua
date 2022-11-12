@@ -71,37 +71,9 @@ minetest.register_on_joinplayer(function(player)
 	player:set_sun({
 		-- Set to false because the sunrise horizon texture seems buggy with the type="plain" sky
 		sunrise_visible = false,
-		texture = "sd_laf_sun_1.png",
+		texture = "sd_laf_sun.png",
 	})
-end)
-
--- Animated sun texture:
---
--- Animation frames are in the order:
--- sun1.png
--- sun2.png
--- sun3.png
--- etc..
-
-local max_frames = 7 -- number of frames
-local framerate = 5 -- frames per second
-
-local time = 0
-local frame = 1
-minetest.register_globalstep(function(dtime)
-	time = time + dtime
-	if time < 1 / framerate then
-		return
-	end
-
-	time = 0
-	frame = frame + 1
-	if frame > max_frames then
-		frame = 1
-	end
-	for _, player in pairs(minetest.get_connected_players()) do
-		player:set_sun({
-			texture = ("sd_laf_sun_%d.png"):format(frame),
-		})
-	end
+	player:set_moon({
+		texture = "sd_laf_saturn.png",
+	})
 end)
