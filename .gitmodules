@@ -1,3 +1,6 @@
 [submodule "mods/modlib"]
 	path = mods/modlib
 	url = https://github.com/appgurueu/modlib.git
+[submodule "mods/fslib"]
+	path = mods/fslib
+	url = https://github.com/appgurueu/fslib.git
