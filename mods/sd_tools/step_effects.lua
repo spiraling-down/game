@@ -37,7 +37,7 @@ minetest.register_globalstep(function(dtime)
 					local new_wear = math.min(max_wear, stack:get_wear() + math.ceil(deplete))
 					stack:set_wear(new_wear)
 					if new_wear == max_wear and itemdef._on_deplete then
-						stack = itemdef._on_deplete(stack)
+						stack = itemdef._on_deplete(stack, player)
 					end
 					assert(inventory:set_stack("main", i, stack))
 				end

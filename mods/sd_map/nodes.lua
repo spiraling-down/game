@@ -2,8 +2,17 @@ modlib.mod.require("crumbling")
 
 local modname = minetest.get_current_modname()
 
+local function dig_and_give(name)
+	return function(_, _, digger)
+		inv.try_increment_count(digger, name) -- discard items silently if at max
+		return true
+	end
+end
+
 local nodes = {
 	basalt = {
+		groups = { drillable = 2 },
+		drop = {},
 		_variants = 4,
 		_children = {
 			cracked = { _variants = 2 },
@@ -13,9 +22,13 @@ local nodes = {
 		},
 	},
 	carbon = {
+		groups = { drillable = 1 },
+		on_dig = dig_and_give("carbon"),
 		_variants = 4,
 	},
 	granite = {
+		groups = { drillable = 2 },
+		drop = {},
 		_variants = 4,
 		_children = {
 			cracked = { _variants = 2 },
@@ -46,6 +59,8 @@ local nodes = {
 		},
 	},
 	limestone = {
+		groups = { drillable = 2 },
+		drop = {},
 		_variants = 4,
 		_children = {
 			cracked = { _variants = 2 },
@@ -53,6 +68,8 @@ local nodes = {
 		},
 	},
 	obsidian = {
+		groups = { drillable = 3 },
+		drop = {},
 		_variants = 4,
 		_children = {
 			cracked = { _variants = 2 },
@@ -60,6 +77,8 @@ local nodes = {
 		},
 	},
 	sand = {
+		groups = { drillable = 1 },
+		on_dig = dig_and_give("sand"),
 		_variants = 4,
 		_children = {
 			basalt = { _variants = 4 },
