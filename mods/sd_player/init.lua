@@ -9,6 +9,14 @@ end
 
 minetest.register_on_joinplayer(init)
 minetest.register_on_newplayer(function(player)
+	do -- adjust inventory list widths
+		local inventory = player:get_inventory()
+		inventory:set_size("main", 4) -- hotbar-only
+		-- Remove crafting-related lists
+		inventory:set_size("craft", 0)
+		inventory:set_size("craftpreview", 0)
+		inventory:set_size("craftresult", 0)
+	end
 	init(player)
 	-- TODO what if this isn't persisted?
 	inv.set_count(player, "lamp", 20)
