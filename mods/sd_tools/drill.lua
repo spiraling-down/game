@@ -5,6 +5,9 @@ local max_wear = 65535
 local itemname, itemname_overcharged
 
 local function on_secondary_use(itemstack, player)
+	if itemstack:get_wear() > 0 then
+		return
+	end
 	if inv.try_decrement_count(player, "saturnium") then
 		itemstack:set_name(itemname_overcharged)
 		return itemstack
