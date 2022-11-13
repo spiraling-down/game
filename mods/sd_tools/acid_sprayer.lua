@@ -115,10 +115,39 @@ end
 
 local max_wear = 65535
 local use_duration = 2
-return register("acid_sprayer", {
+
+local function is_recharging(stack)
+	return stack:get_meta():get_int(modname .. "_recharging") ~= 0
+end
+
+local function set_recharging(stack, bool)
+	return stack:get_meta():set_int(modname .. "_recharging", bool and 1 or 0)
+end
+
+local function on_secondary_use(itemstack, user)
+	if is_recharging(itemstack) then
+		return
+	end
+	if inv.try_decrement_count(user, "acid") then
+		set_recharging(itemstack, true)
+		return itemstack
+	else
+		hud.show_error_message(user, "no acid")
+	end
+end
+
+local name = register("acid_sprayer", {
 	description = "Acid Sprayer",
+	range = 0,
+	on_secondary_use = on_secondary_use,
+	on_place = on_secondary_use,
 	-- TODO consider only "enabling" `_on_hold` in `on_use`
 	_on_hold = function(itemstack, user, dtime)
+		if itemstack:get_wear() == 0 then
+			set_recharging(itemstack, false)
+		elseif is_recharging(itemstack) then
+			return
+		end
 		local wear_required = math.floor(max_wear * (dtime / use_duration))
 		local wear_left = max_wear - itemstack:get_wear()
 		if wear_required < wear_left then
@@ -127,5 +156,10 @@ return register("acid_sprayer", {
 		end
 		return itemstack
 	end,
+	_can_recharge = is_recharging,
 	_recharge_time = use_duration * 2,
 })
+
+local stack = ItemStack(name)
+stack:set_wear(max_wear)
+return stack

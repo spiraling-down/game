@@ -6,24 +6,27 @@ local itemname, itemname_overcharged
 
 itemname = register("drill", {
 	description = "Drill",
-	on_use = function(itemstack, placer, pointed_thing)
-		if itemstack:get_wear() == 0 then -- enable overcharge
-			itemstack:set_name(itemname_overcharged)
-			return minetest.registered_items[itemname_overcharged].on_use(itemstack, placer, pointed_thing)
-		end
+	on_use = function(itemstack)
 		-- TODO dig something
 		return itemstack
+	end,
+	on_place = function(itemstack, player)
+		if inv.try_decrement_count(player, "saturnium") then
+			itemstack:set_name(itemname_overcharged)
+			return itemstack
+		else
+			hud.show_error_message(player, "no saturnium")
+		end
 	end,
 	_recharge_time = 30,
 })
 
--- TODO (!) overcharged texture
 itemname_overcharged = register("drill_overcharged", {
 	description = "Overcharged Drill",
-	on_use = function(itemstack, placer, pointed_thing)
+	on_use = function(itemstack, player, pointed_thing)
 		if itemstack:get_wear() == max_wear then -- disable overcharge
 			itemstack:set_name(itemname)
-			return minetest.registered_items[itemname].on_use(itemstack, placer, pointed_thing)
+			return minetest.registered_items[itemname].on_use(itemstack, player, pointed_thing)
 		end
 		-- TODO dig even more
 		return itemstack

@@ -9,12 +9,17 @@ local wear_per_use = math.floor(max_wear / max_uses)
 return register("manipulator", {
 	_recharge_time = 60,
 	description = "Manipulator",
-	on_place = function(itemstack, placer, pointed_thing)
+	on_place = function(itemstack, player, pointed_thing)
 		if itemstack:get_wear() + wear_per_use > max_wear then
 			return
 		end
-		itemstack:add_wear(wear_per_use)
-		minetest.item_place(ItemStack(scaffolding_nodename), placer, pointed_thing)
+		if inv.try_decrement_count(player, "steel") then
+			itemstack:add_wear(wear_per_use)
+			minetest.item_place(ItemStack(scaffolding_nodename), player, pointed_thing)
+		else
+			hud.show_error_message(player, "no steel")
+		end
 		return itemstack
 	end,
+	-- TODO on_use for digging organics
 })

@@ -10,17 +10,21 @@ local wear_per_use = math.floor(max_wear / max_uses)
 return register("light", {
 	_recharge_time = 60,
 	description = "Light",
-	on_place = function(itemstack, _, pointed_thing)
+	on_place = function(itemstack, player, pointed_thing)
 		if itemstack:get_wear() + wear_per_use > max_wear then
 			return
 		end
 		local current_node = minetest.get_node(pointed_thing.above).name
 		if current_node == "air" or current_node == lamp.off then
-			itemstack:add_wear(wear_per_use)
-			minetest.set_node(pointed_thing.above, {
-				name = lamp.on,
-				param2 = minetest.dir_to_wallmounted(pointed_thing.under - pointed_thing.above),
-			})
+			if inv.try_decrement_count(player, "lamp") then
+				itemstack:add_wear(wear_per_use)
+				minetest.set_node(pointed_thing.above, {
+					name = lamp.on,
+					param2 = minetest.dir_to_wallmounted(pointed_thing.under - pointed_thing.above),
+				})
+			else
+				hud.show_error_message(player, "no lamps")
+			end
 		end
 		return itemstack
 	end,

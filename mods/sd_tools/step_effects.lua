@@ -15,7 +15,7 @@ minetest.register_globalstep(function(dtime)
 		local itemdef = minetest.registered_items[wielded_item:get_name()] or {}
 		if itemdef._on_hold and holding then
 			assert(player:set_wielded_item(itemdef._on_hold(wielded_item, player, dtime) or wielded_item))
-		elseif itemdef._recharge_time then
+		elseif itemdef._recharge_time and ((not itemdef._can_recharge) or itemdef._can_recharge(wielded_item)) then
 			local recharge = dtime / itemdef._recharge_time * max_wear + (recharge_catchup[name] or 0)
 			wielded_item:add_wear(-recharge)
 			assert(player:set_wielded_item(wielded_item))
