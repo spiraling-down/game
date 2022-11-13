@@ -35,7 +35,7 @@ local layers = {
 for _, layer in ipairs(layers) do
 	-- Cache content IDs
 	layer.cids = {}
-	for variant = 1, nodes[layer.nodename]._ do
+	for variant = 1, nodes[layer.nodename]._variants do
 		layer.cids[variant] = minetest.get_content_id(("%s:%s_%d"):format(modname, layer.nodename, variant))
 	end
 end

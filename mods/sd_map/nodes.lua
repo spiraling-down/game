@@ -4,77 +4,97 @@ local modname = minetest.get_current_modname()
 
 local nodes = {
 	basalt = {
-		_ = 4,
-		cracked = 2,
-		crumbling = 2,
-		granite = 4,
-		lava = 4,
-	},
-	carbon = 4,
-	granite = {
-		_ = 4,
-		cracked = 2,
-		crumbling = 2,
-		basalt = 4,
-		dark = 4,
-		semifrozen = {
-			_ = 4,
-			cracked = 2,
-			crumbling = 2,
+		_variants = 4,
+		_children = {
+			cracked = { _variants = 2 },
+			crumbling = { _variants = 2 },
+			granite = { _variants = 2 },
+			lava = { _variants = 4 },
 		},
-		frozen = {
-			_ = 4,
-			cracked = 2,
-			crumbling = 2,
-			subdued = 4,
+	},
+	carbon = {
+		_variants = 4,
+	},
+	granite = {
+		_variants = 4,
+		_children = {
+			cracked = { _variants = 2 },
+			crumbling = { _variants = 2 },
+			basalt = { _variants = 4 },
+			dark = { _variants = 4 },
+			semifrozen = {
+				_variants = 4,
+				_children = {
+					cracked = { _variants = 4 },
+					crumbling = { _variants = 4 },
+				},
+			},
+			frozen = {
+				_variants = 4,
+				_children = {
+					cracked = { _variants = 2 },
+					crumbling = { _variants = 2 },
+					subdued = { _variants = 4 },
+				},
+			},
 		},
 	},
 	lava = {
-		_ = 4,
-		basalt = 4,
+		_variants = 4,
+		_children = {
+			basalt = { _variants = 4 },
+		},
 	},
 	limestone = {
-		_ = 4,
-		cracked = 2,
-		crumbling = 2,
+		_variants = 4,
+		_children = {
+			cracked = { _variants = 2 },
+			crumbling = { _variants = 2 },
+		},
 	},
 	obsidian = {
-		_ = 4,
-		cracked = 2,
-		crumbling = 2,
+		_variants = 4,
+		_children = {
+			cracked = { _variants = 2 },
+			crumbling = { _variants = 2 },
+		},
 	},
 	sand = {
-		_ = 4,
-		basalt = 4,
-		frozen = 4,
-		granite = 4,
-		red = 4,
+		_variants = 4,
+		_children = {
+			basalt = { _variants = 4 },
+			frozen = { _variants = 4 },
+			granite = { _variants = 4 },
+			red = { _variants = 4 },
+		},
 	},
 }
 
--- Recursively register the tree of nodes; each node gets all its attributes as groups
-local groups = {}
-local function register_nodes(basename, variants)
-	if type(variants) == "table" then
-		for variant, subvariants in pairs(variants) do
-			groups[variant] = 1
-			local name = basename
-			if variant ~= "_" then
-				name = name .. variant .. "_"
-			end
-			register_nodes(name, subvariants)
-			groups[variant] = nil
+local function register_nodes(pathname, name, def)
+	if def._variants then
+		for variant = 1, def._variants do
+			minetest.register_node(
+				("%s:%s_%d"):format(modname, pathname, variant),
+				modlib.table.deepcomplete(table.copy(def), {
+					tiles = { ("%s_%s_%d.png"):format(modname, pathname, variant) },
+					groups = { [name] = 1 }, -- add node name as group
+				})
+			)
 		end
-		return
 	end
-	for variant = 1, variants do
-		minetest.register_node(("%s:%s%d"):format(modname, basename, variant), {
-			tiles = { ("%s_%s%d.png"):format(modname, basename, variant) },
-			groups = table.copy(groups),
-		})
+	-- Recursively register "child" nodes
+	if def._children then
+		for child_name, child_def in pairs(def._children) do
+			local parent_def = table.copy(def)
+			parent_def._children = nil
+			modlib.table.deepcomplete(parent_def, { groups = { [name] = 1 } })
+			register_nodes(pathname .. "_" .. child_name, child_name, modlib.table.deepcomplete(parent_def, child_def))
+		end
 	end
 end
 
-register_nodes("", nodes)
+for name, def in pairs(nodes) do
+	register_nodes(name, name, def)
+end
 
 return nodes
