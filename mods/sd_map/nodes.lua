@@ -43,8 +43,8 @@ local nodes = {
 			semifrozen = {
 				_variants = 4,
 				_children = {
-					cracked = { _variants = 4 },
-					crumbling = { _variants = 4 },
+					cracked = { _variants = 2 },
+					crumbling = { _variants = 2 },
 				},
 			},
 			frozen = {
