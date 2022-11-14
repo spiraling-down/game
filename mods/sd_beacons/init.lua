@@ -1,9 +1,10 @@
 local radar_dist = 100
+local beacon_spread=1000
 
 local get_beacon_pos = function(beacon_number)
 	math.randomseed(minetest.get_mapgen_setting("seed") + beacon_number)
 	--beacons get deeper as you progress
-	return vector.new(math.random(-100, 100), math.random(-100 * beacon_number, 0), math.random(-100, 100))
+	return vector.new(math.random(-beacon_spread, beacon_spread), math.random(-beacon_spread * beacon_number, 0), math.random(-beacon_spread, beacon_spread))
 end
 
 local spawn_beacon = function(beacon_number)
