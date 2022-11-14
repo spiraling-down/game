@@ -75,7 +75,7 @@ local nodes = {
 	obsidian = {
 		groups = { drillable = 3 },
 		drop = {},
-		_variants = 4,
+		_variants = 2,
 		_children = {
 			cracked = { _variants = 2 },
 			crumbling = { _variants = 2 },
@@ -111,8 +111,9 @@ local function register_nodes(pathname, name, def)
 		for child_name, child_def in pairs(def._children) do
 			local parent_def = table.copy(def)
 			parent_def._children = nil
-			modlib.table.deepcomplete(parent_def, { groups = { [name] = 1 } })
-			register_nodes(pathname .. "_" .. child_name, child_name, modlib.table.deepcomplete(parent_def, child_def))
+			modlib.table.deep_add_all(parent_def, { groups = { [name] = 1 } })
+			modlib.table.deep_add_all(parent_def, child_def)
+			register_nodes(pathname .. "_" .. child_name, child_name, parent_def)
 		end
 	end
 end
