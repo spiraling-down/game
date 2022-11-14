@@ -50,6 +50,9 @@ local overcharged_tool_caps = {
 
 local function cancel_digging(player)
 	local dig_actions = digging[player:get_player_name()]
+	if not dig_actions then
+		return
+	end
 	for i, dig_action in modlib.table.rpairs(dig_actions) do
 		minetest.delete_particlespawner(dig_action.particlespawner_id)
 		dig_action.job:cancel()
