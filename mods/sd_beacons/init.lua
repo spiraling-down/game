@@ -1,15 +1,28 @@
 local radar_dist = 100
-local beacon_spread=1000
+local beacon_spread = 1000
 
 local get_beacon_pos = function(beacon_number)
 	math.randomseed(minetest.get_mapgen_setting("seed") + beacon_number)
 	--beacons get deeper as you progress
-	return vector.new(math.random(-beacon_spread, beacon_spread), math.random(-beacon_spread * beacon_number, 0), math.random(-beacon_spread, beacon_spread))
+	return vector.new(
+		math.random(-beacon_spread, beacon_spread),
+		math.random(-beacon_spread / 10 * beacon_number, 0),
+		math.random(-beacon_spread, beacon_spread)
+	)
 end
 
 local spawn_beacon = function(beacon_number)
 	local pos = get_beacon_pos(beacon_number)
 	minetest.place_schematic(pos, "beacon_schematic_" .. beacon_number .. ".mts", nil, nil, false)
+end
+
+--To be called when you get the artifact from the current beacon
+local advance_to_next_beacon = function(current_beacon)
+	for _, player in pairs(minetest.get_connected_players()) do
+		local meta = player:get_meta()
+		meta:set_int("current_beacon", current_beacon + 1)
+	end
+	spawn_beacon(current_beacon + 1)
 end
 
 local beacon_hud_id = nil
@@ -45,12 +58,12 @@ minetest.register_globalstep(function()
 			vector.new(0, 1, 0),
 			-player:get_look_horizontal()
 		)
-        offset.y = 0
+		offset.y = 0
 		if offset:length() > radar_dist then
-            offset = offset:normalize()
+			offset = offset:normalize()
 			player:hud_change(beacon_hud_id, "offset", { x = offset.x * 70 + 100, y = -offset.z * 70 })
 		else
-            offset = offset/radar_dist
+			offset = offset / radar_dist
 			player:hud_change(beacon_hud_id, "offset", { x = offset.x * 70 + 100, y = -offset.z * 70 })
 		end
 	end
