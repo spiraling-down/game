@@ -10,6 +10,11 @@ local function dig_and_give(name)
 end
 
 local nodes = {
+	mantle = {
+		groups = { drillable = 1 },
+		drop = {},
+		_variants = 4,
+	},
 	basalt = {
 		groups = { drillable = 2 },
 		drop = {},
