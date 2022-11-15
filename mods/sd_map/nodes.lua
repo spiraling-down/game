@@ -1,4 +1,8 @@
-modlib.mod.require("crumbling")
+local require = modlib.mod.require
+
+require("crumbling")
+
+local generate_extrusion_mesh = require("generate_extrusion_mesh")
 
 local modname = minetest.get_current_modname()
 
@@ -92,6 +96,102 @@ local nodes = {
 			red = { _variants = 4 },
 		},
 	},
+	deco = {
+		sunlight_propagates = true,
+		paramtype = "light",
+		paramtype2 = "facedir", -- allow randomizing rotations
+		_children = {
+			flower = plant({
+				_children = {
+					blue = {
+						_variants = 4,
+					},
+					red = {
+						_variants = 4,
+					},
+					white = {
+						_variants = 4,
+					},
+					saturnium = {
+						_children = {
+							small = { _variants = 1 },
+							medium = { _variants = 1 },
+							large = { _variants = 1 },
+						},
+					},
+				},
+			}),
+			grass = plant({
+				_variants = 4,
+				_children = {
+					dry = {
+						_variants = 4,
+					},
+					glowing_green = {
+						_variants = 4,
+					},
+				},
+			}),
+			mushroom = plant({
+				_children = {
+					glowing_green = {
+						_variants = 4,
+					},
+					glowing_blue = {
+						_variants = 4,
+					},
+				},
+			}),
+			pebbles = {
+				groups = { drillable = 1 },
+				drop = {},
+				paramtype2 = "facedir",
+				_drawtype = "plate",
+				_children = {
+					basalt = { _variants = 4 },
+					granite = { _variants = 4 },
+					limestone = { _variants = 4 },
+				},
+			},
+			pile = {
+				groups = { drillable = 1 },
+				drop = {},
+				paramtype2 = "facedir",
+				_drawtype = "plate",
+				_children = {
+					ash = { _variants = 4 },
+					snow = { _variants = 4 },
+					sand = {
+						_variants = 4,
+						_children = {
+							red = { _variants = 4 },
+						},
+					},
+				},
+			},
+			rubble = {
+				paramtype2 = "facedir",
+				_drawtype = "plate",
+				_children = {
+					organics = {
+						_variants = 4,
+						_children = {
+							dry = { _variants = 4 },
+							frozen = { _variants = 4 },
+						},
+					},
+				},
+			},
+			shell = {
+				groups = { drillable = 1 },
+				drop = {},
+				paramtype2 = "facedir",
+				_drawtype = "plate",
+				_variants = 8,
+			},
+			-- TODO vines, multi-node decorations (stalactites, stalagmites, icicles), complete decorations
+		},
+	},
 }
 
 local defs_by_path = {}
@@ -100,12 +200,25 @@ local function register_nodes(pathname, name, def)
 	if def._variants then
 		defs_by_path[pathname] = def
 		for variant = 1, def._variants do
+			local medianame = ("%s_%s_%d"):format(modname, pathname, variant)
+			local completions = {
+				tiles = { medianame .. ".png" },
+				groups = { [name] = 1 }, -- add node name as group
+			}
+			if def._drawtype == "plate" then
+				local res = generate_extrusion_mesh(medianame .. ".png", medianame .. ".obj")
+				completions.drawtype = "mesh"
+				completions.mesh = medianame .. ".obj"
+				local box = {
+					type = "fixed",
+					fixed = { -0.5, -0.5, -0.5, 0.5, 1 / res - 0.5, 0.5 },
+				}
+				completions.selection_box = box
+				completions.collision_box = box
+			end
 			minetest.register_node(
 				("%s:%s_%d"):format(modname, pathname, variant),
-				modlib.table.deepcomplete(table.copy(def), {
-					tiles = { ("%s_%s_%d.png"):format(modname, pathname, variant) },
-					groups = { [name] = 1 }, -- add node name as group
-				})
+				modlib.table.deepcomplete(table.copy(def), completions)
 			)
 		end
 	end
