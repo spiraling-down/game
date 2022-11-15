@@ -15,10 +15,6 @@ local minetest_hash_node_position = minetest.hash_node_position
 
 local c_air = minetest.CONTENT_AIR
 
-local modname = minetest.get_current_modname()
-
-local nodes = modlib.mod.require("nodes")
-
 -- Layer preprocessing for generation
 local layers = {}
 do

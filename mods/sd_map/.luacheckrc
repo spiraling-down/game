@@ -1,4 +1,7 @@
-globals = { "minetest" }
+globals = {
+	"layers",
+	"minetest",
+}
 
 read_globals = {
 	"modlib",
