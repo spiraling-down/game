@@ -1,3 +1,9 @@
+local modname = minetest.get_current_modname()
+
+local require = modlib.mod.require
+
+local nodes, _layers = require("nodes"), require("layers")
+
 local assert, ipairs, pairs = assert, ipairs, pairs
 
 local math_huge, math_min, math_max, math_floor, math_ceil, math_random, math_randomseed =
@@ -13,30 +19,23 @@ local modname = minetest.get_current_modname()
 
 local nodes = modlib.mod.require("nodes")
 
-local layers = {
-	-- Implicit: Air
-	{
-		y_transition = 20, -- where the transition starts
-		y_top = 10, -- where the layer starts
-		nodename = "granite",
-	},
-	{
-		y_transition = 0,
-		y_top = -10,
-		nodename = "basalt",
-	},
-	{
-		y_transition = -20,
-		y_top = -30,
-		nodename = "limestone",
-	},
-}
-
-for _, layer in ipairs(layers) do
-	-- Cache content IDs
-	layer.cids = {}
-	for variant = 1, nodes[layer.nodename]._variants do
-		layer.cids[variant] = minetest.get_content_id(("%s:%s_%d"):format(modname, layer.nodename, variant))
+-- Layer preprocessing for generation
+local layers = {}
+do
+	local transition = 10
+	local y = 10
+	for i, layer in ipairs(_layers) do
+		local cids = {}
+		for variant = 1, assert(nodes[layer.node], layer.node)._variants do
+			cids[variant] = minetest.get_content_id(("%s:%s_%d"):format(modname, layer.node, variant))
+		end
+		assert(#cids > 0)
+		layers[i] = {
+			cids = cids,
+			y_transition = y,
+			y_top = y - (layer.transition or transition),
+		}
+		y = y - layer.height
 	end
 end
 

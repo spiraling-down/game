@@ -94,8 +94,11 @@ local nodes = {
 	},
 }
 
+local defs_by_path = {}
+
 local function register_nodes(pathname, name, def)
 	if def._variants then
+		defs_by_path[pathname] = def
 		for variant = 1, def._variants do
 			minetest.register_node(
 				("%s:%s_%d"):format(modname, pathname, variant),
@@ -122,4 +125,4 @@ for name, def in pairs(nodes) do
 	register_nodes(name, name, def)
 end
 
-return nodes
+return defs_by_path
