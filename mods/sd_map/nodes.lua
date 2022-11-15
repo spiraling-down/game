@@ -20,8 +20,8 @@ local nodes = {
 		drop = {},
 		_variants = 4,
 		_children = {
-			cracked = { _variants = 2 },
-			crumbling = { _variants = 2 },
+			cracked = { _variants = 4 },
+			crumbling = { _variants = 4 },
 			granite = { _variants = 2 },
 			lava = { _variants = 4 },
 		},
@@ -36,22 +36,22 @@ local nodes = {
 		drop = {},
 		_variants = 4,
 		_children = {
-			cracked = { _variants = 2 },
-			crumbling = { _variants = 2 },
+			cracked = { _variants = 4 },
+			crumbling = { _variants = 4 },
 			basalt = { _variants = 4 },
 			dark = { _variants = 4 },
 			semifrozen = {
 				_variants = 4,
 				_children = {
-					cracked = { _variants = 2 },
-					crumbling = { _variants = 2 },
+					cracked = { _variants = 4 },
+					crumbling = { _variants = 4 },
 				},
 			},
 			frozen = {
 				_variants = 4,
 				_children = {
-					cracked = { _variants = 2 },
-					crumbling = { _variants = 2 },
+					cracked = { _variants = 4 },
+					crumbling = { _variants = 4 },
 					subdued = { _variants = 4 },
 				},
 			},
@@ -68,17 +68,17 @@ local nodes = {
 		drop = {},
 		_variants = 4,
 		_children = {
-			cracked = { _variants = 2 },
-			crumbling = { _variants = 2 },
+			cracked = { _variants = 4 },
+			crumbling = { _variants = 4 },
 		},
 	},
 	obsidian = {
 		groups = { drillable = 3 },
 		drop = {},
-		_variants = 2,
+		_variants = 4,
 		_children = {
-			cracked = { _variants = 2 },
-			crumbling = { _variants = 2 },
+			cracked = { _variants = 4 },
+			crumbling = { _variants = 4 },
 		},
 	},
 	sand = {
