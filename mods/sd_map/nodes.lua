@@ -13,6 +13,14 @@ local function dig_and_give(name)
 	end
 end
 
+local function plant(def)
+	return modlib.table.deepcomplete(def, {
+		drawtype = "plantlike",
+		paramtype2 = "none", -- "facedir" is not supported
+		groups = { organics = 1 },
+	})
+end
+
 local nodes = {
 	mantle = {
 		groups = { drillable = 1 },
