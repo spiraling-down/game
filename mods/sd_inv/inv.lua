@@ -7,8 +7,22 @@ function inv.register_on_change(callback)
 	table.insert(inv.registered_on_changes, callback)
 end
 
+local item_count_prefix = "sd_inv_item_count_"
+
+function inv.clear(player)
+	local meta = player:get_meta()
+	for k in pairs(meta:to_table().fields) do
+		if modlib.text.starts_with(k, "sd_inv_item_count_") then
+			meta:set_int(k, 0)
+		end
+	end
+	modlib.table.icall(inv.registered_on_changes, player)
+end
+
+minetest.register_on_dieplayer(inv.clear)
+
 function inv.get_count(player, itemname)
-	return player:get_meta():get_int("sd_inv_item_count_" .. itemname)
+	return player:get_meta():get_int(item_count_prefix .. itemname)
 end
 
 function inv.has(player, itemname, min_count)
@@ -30,7 +44,7 @@ end
 
 function inv.set_count(player, itemname, count)
 	assert(count >= 0 and count <= inv.max_count)
-	player:get_meta():set_int("sd_inv_item_count_" .. itemname, count)
+	player:get_meta():set_int(item_count_prefix .. itemname, count)
 	modlib.table.icall(inv.registered_on_changes, player)
 end
 
