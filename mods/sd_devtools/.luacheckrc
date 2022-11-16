@@ -1,4 +1,6 @@
 read_globals = {
 	"inv",
-	"minetest",
+	"hud",
 }
+
+globals = { "minetest" }
