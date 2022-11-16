@@ -2,28 +2,32 @@ local basic_mob = {
 	_attack_distance = 20,
 	_notice_distance = 20,
 	_punch_interval = 2,
-	_walk_speed = 0,
+	_walk_speed = 3,
 	_attack_type = "guided", -- options will be: melee, ballistic, straight_shot, guided_missile
 	_attack_strength = 1,
 
 	_persistent_properties = {
 		time_since_last_attack = 0,
+		age = 0,
 	},
 
 	max_hp = 20,
 	physical = true,
-	visual = "cube", --Temporary visual
-	textures = {}, --Temporary texture
+	collisionbox = { 0.1, 0.1, 0.1, -0.1, -0.1, -0.1 },
+	visual_size = vector.new(1.5, 1.5, 1.5),
+	visual = "sprite", --Temporary visual
+	textures = { "sd_mobs_bat.png" }, --Temporary texture
 	stepheight = 1.1,
 	automatic_face_movement_dir = 0.0,
 	automatic_face_movement_max_rotation_per_sec = 90,
 
 	on_activate = function(self, sd, dtime)
-		self.object:set_acceleration(vector.new(0, -9.8, 0)) --Set Gravity
+		--self.object:set_acceleration(vector.new(0, -9.8, 0)) --Set Gravity
 	end,
 
 	on_step = function(self, dtime, moveresult)
 		self._persistent_properties.time_since_last_attack = self._persistent_properties.time_since_last_attack + dtime
+		self._persistent_properties.age = self._persistent_properties.age + dtime
 		--Assuming only singleplayer
 		for _, player in pairs(minetest.get_connected_players()) do
 			--Move towards player if close enough
@@ -32,6 +36,9 @@ local basic_mob = {
 				local oldvel = self.object:get_velocity()
 				self.object:set_velocity(vector.new(dir.x * self._walk_speed, oldvel.y, dir.z * self._walk_speed))
 			end
+			self.object:add_velocity(
+				vector.new(0, (self.object:get_pos():direction(player:get_pos() + vector.new(0, 2, 0))).y, 0)
+			)
 			--Attack if player is close enough
 			if player:get_pos():distance(self.object:get_pos()) < self._attack_distance then
 				if self._persistent_properties.time_since_last_attack > self._punch_interval then
@@ -48,7 +55,7 @@ local basic_mob = {
 						)
 					elseif self._attack_type == "ballistic" then
 						minetest.add_entity(
-							self.object:get_pos() + vector.new(0, 1.5, 0),
+							self.object:get_pos(),
 							"sd_mobs:basic_projectile",
 							minetest.serialize({
 								offset = player:get_pos() - self.object:get_pos(),
@@ -58,7 +65,7 @@ local basic_mob = {
 						)
 					elseif self._attack_type == "guided" then
 						minetest.add_entity(
-							self.object:get_pos() + vector.new(0, 1.5, 0),
+							self.object:get_pos(),
 							"sd_mobs:basic_projectile",
 							minetest.serialize({
 								offset = player:get_pos() - self.object:get_pos(),
@@ -94,7 +101,7 @@ end
 --Basic projectile which explodes on impact
 local basic_projectile = {
 	_explode_radius = 3,
-	_explode_strength = 1,
+	_explode_strength = 10,
 	_type = "",
 	_target_player = nil,
 	_speed = 10,
@@ -102,8 +109,9 @@ local basic_projectile = {
 
 	max_hp = 20,
 	physical = true,
+	visual_size = vector.new(0.8, 0.8, 0.8),
 	visual = "sprite", --Temporary visual
-	textures = {}, --Temporary texture
+	textures = { "sd_tools_acid_sprayer_droplet_1.png" }, --Temporary texture
 
 	on_activate = function(self, staticdata, dtime)
 		self._particlespawner_id = minetest.add_particlespawner({
@@ -113,6 +121,7 @@ local basic_projectile = {
 			collision_removal = false,
 			object_collision = true,
 			attached = self.object,
+			scale = vector.new(2, 2, 2),
 			texpool = {
 				"sd_tools_acid_sprayer_droplet_1.png",
 				"sd_tools_acid_sprayer_droplet_2.png",
@@ -131,7 +140,6 @@ local basic_projectile = {
 			elseif self._type == "guided" then
 				self._target_player = minetest.get_player_by_name(data.target_player_name)
 				self.object:set_velocity((self.object:get_pos():direction(self._target_player:get_pos())) * self._speed)
-				minetest.chat_send_all("guided")
 			end
 		end
 	end,
@@ -143,20 +151,20 @@ local basic_projectile = {
 		if moveresult.collides then
 			--Explode, and damage all objects around
 			for _, object in pairs(minetest.get_objects_inside_radius(self.object:get_pos(), self._explode_radius)) do
-				--if object ~= self.object then
-				object:punch(
-					self.object,
-					nil,
-					{
-						full_punch_interval = 1.0,
-						max_drop_level = 0,
-						damage_groups = { fleshy = self._explode_strength },
-					}, --temporary damage groups
-					vector.normalize(self.object:get_velocity())
-				)
-				--end
+				if minetest.is_player(object) then
+					object:punch(
+						self.object,
+						1,
+						{
+							full_punch_interval = 1.0,
+							max_drop_level = 0,
+							damage_groups = { fleshy = self._explode_strength },
+						}, --temporary damage groups
+						vector.normalize(self.object:get_velocity())
+					)
+					self.object:remove()
+				end
 			end
-			self.object:remove()
 		end
 	end,
 }
