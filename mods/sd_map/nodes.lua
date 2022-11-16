@@ -1,6 +1,7 @@
 local require = modlib.mod.require
 
 require("crumbling")
+require("support")
 
 local generate_extrusion_mesh = require("generate_extrusion_mesh")
 
@@ -18,6 +19,7 @@ local function plant(def)
 		drawtype = "plantlike",
 		paramtype2 = "none", -- "facedir" is not supported
 		groups = { organics = 1 },
+		_support = "floor",
 	})
 end
 
