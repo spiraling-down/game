@@ -21,6 +21,14 @@ local function plant(def)
 	})
 end
 
+local function particle_texpool(basename, variants)
+	local texpool = {}
+	for variant = 1, variants do
+		texpool[variant] = ("%s_particle_%s_%d.png"):format(modname, basename, variant)
+	end
+	return texpool
+end
+
 local nodes = {
 	mantle = {
 		groups = { drillable = 1 },
@@ -138,6 +146,31 @@ local nodes = {
 					glowing_green = {
 						_variants = 4,
 					},
+					magmatic = {
+						_add_particlespawner = function(pos)
+							return minetest.add_particlespawner({
+								amount = 10,
+								time = 0,
+								pos = {
+									min = pos:subtract(0.5),
+									max = pos:add(0.5),
+								},
+								vel = {
+									min = vector.new(-1, 0.5, -1),
+									max = vector.new(1, 2, 1),
+								},
+								drag = 0.75,
+								acc = vector.new(0, -2, 0),
+								size = {},
+								exptime = {
+									min = 1,
+									max = 3,
+								},
+								texpool = particle_texpool("smoldering", 4),
+							})
+						end,
+						_variants = 4,
+					},
 				},
 			}),
 			mushroom = plant({
@@ -245,5 +278,7 @@ end
 for name, def in pairs(nodes) do
 	register_nodes(name, name, def)
 end
+
+require("node_particles") -- NOTE: This needs to run *after* node registrations.
 
 return defs_by_path
