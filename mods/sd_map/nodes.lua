@@ -7,9 +7,9 @@ local generate_extrusion_mesh = require("generate_extrusion_mesh")
 
 local modname = minetest.get_current_modname()
 
-local function dig_and_give(name)
+local function dig_and_give(name, count)
 	return function(_, _, digger)
-		inv.try_increment_count(digger, name) -- discard items silently if at max
+		inv.try_increment_count(digger, name, count or 1) -- discard items silently if at max
 		return true
 	end
 end
@@ -42,6 +42,7 @@ local nodes = {
 		groups = { drillable = 2 },
 		drop = {},
 		_variants = 4,
+		_ore_bearing = true,
 		_children = {
 			cracked = { _variants = 4 },
 			crumbling = { _variants = 4 },
@@ -51,13 +52,14 @@ local nodes = {
 	},
 	carbon = {
 		groups = { drillable = 1 },
-		on_dig = dig_and_give("carbon"),
+		on_dig = dig_and_give("carbon", 10),
 		_variants = 4,
 	},
 	granite = {
 		groups = { drillable = 2 },
 		drop = {},
 		_variants = 4,
+		_ore_bearing = true,
 		_children = {
 			cracked = { _variants = 4 },
 			crumbling = { _variants = 4 },
@@ -72,6 +74,7 @@ local nodes = {
 			},
 			frozen = {
 				_variants = 4,
+				_ore_bearing = true,
 				_children = {
 					cracked = { _variants = 4 },
 					crumbling = { _variants = 4 },
@@ -238,6 +241,40 @@ local nodes = {
 	},
 }
 
+-- Ores
+
+local function ore_texture(name, tier_name, variant)
+	return ("%s_ore_%s_%s_%d.png"):format(modname, name, tier_name, variant)
+end
+
+local ore_tiers = {
+	poor = {
+		groups = { drillable = 1 },
+		_drop_count = 1,
+		_variants = 4,
+	},
+	medium = {
+		groups = { drillable = 1 },
+		_drop_count = 2,
+		_variants = 4,
+	},
+	rich = {
+		groups = { drillable = 2 },
+		_drop_count = 6,
+		_variants = 4,
+	},
+	abundant = {
+		groups = { drillable = 3 },
+		_drop_count = 9,
+		_variants = 1,
+	},
+}
+
+local ores = {
+	coal = "carbon",
+	iron = "iron_ore",
+}
+
 local defs_by_path = {}
 
 local function register_nodes(pathname, name, def)
@@ -260,10 +297,28 @@ local function register_nodes(pathname, name, def)
 				completions.selection_box = box
 				completions.collision_box = box
 			end
-			minetest.register_node(
-				("%s:%s_%d"):format(modname, pathname, variant),
-				modlib.table.deepcomplete(table.copy(def), completions)
-			)
+			local nodename = ("%s:%s_%d"):format(modname, pathname, variant)
+			local node_def = modlib.table.deepcomplete(table.copy(def), completions)
+			local ore_node_names = {}
+			if def._ore_bearing then
+				for ore_name, drop_name in pairs(ores) do
+					for tier_name, tier_def in pairs(ore_tiers) do
+						for ore_variant = 1, tier_def._variants do
+							local ore_node_name = ("%s_ore_%s_%s_%d"):format(nodename, ore_name, tier_name, ore_variant)
+							table.insert(ore_node_names, ore_node_name)
+							minetest.register_node(
+								ore_node_name,
+								modlib.table.deep_add_all(modlib.table.deep_add_all(table.copy(node_def), tier_def), {
+									tiles = { node_def.tiles[1] .. "^" .. ore_texture(ore_name, tier_name, variant) },
+									on_dig = dig_and_give(drop_name, tier_def._drop_count),
+								})
+							)
+						end
+					end
+				end
+			end
+			node_def._ore_node_names = ore_node_names
+			minetest.register_node(nodename, node_def)
 		end
 	end
 	-- Recursively register "child" nodes
