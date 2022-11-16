@@ -61,12 +61,13 @@ local function cancel_digging(player)
 end
 
 local function dig_node(pos, player)
-	local node = minetest.get_node(pos)
-	local def = minetest.registered_nodes[node.name]
+	local oldnode = minetest.get_node(pos)
+	local def = minetest.registered_nodes[oldnode.name]
 	local on_dig = def.on_dig or minetest.node_dig
-	local success = on_dig(pos, node, player)
+	local success = on_dig(pos, oldnode, player)
 	if success == true or success == nil then
 		minetest.remove_node(pos)
+		modlib.table.icall(minetest.registered_on_dignodes, pos, oldnode, player)
 	end
 end
 
