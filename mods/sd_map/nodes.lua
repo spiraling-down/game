@@ -19,6 +19,7 @@ local function plant(def)
 		drawtype = "plantlike",
 		paramtype2 = "none", -- "facedir" is not supported
 		groups = { organics = 1 },
+		walkable = false,
 		_support = "floor",
 	})
 end
