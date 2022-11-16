@@ -1,4 +1,4 @@
-local radar_dist = 100
+local radar_dist = 300
 local beacon_spread = 1000
 
 local get_beacon_pos = function(beacon_number)
@@ -28,23 +28,22 @@ end
 local beacon_hud_id = nil
 minetest.register_on_joinplayer(function(player)
 	player:hud_add({
-		hud_elem_type = "compass",
+		hud_elem_type = "image",
 		name = "radar",
-		position = { x = 0.0, y = 0.5 },
+		position = { x = 1, y = 1 },
 		z_index = 100,
-		direction = 1,
-		size = { x = 150, y = 150 },
-		offset = { x = 100, y = 0 },
-		text = "sd_compass_bg.png",
+		scale = { x = 2, y = 2 },
+		offset = { x = -65, y = -65 },
+		text = "sd_beacons_compass_bg.png",
 	})
 	beacon_hud_id = player:hud_add({
 		hud_elem_type = "image",
 		name = "beacon_on_compass",
-		position = { x = 0.0, y = 0.5 },
+		position = { x = 1, y = 1 },
 		z_index = 100,
 		scale = { x = 1, y = 1 },
 		offset = { x = 0, y = 0 },
-		text = "sd_compass_beacon.png",
+		text = "sd_beacons_compass_beacon_white.png^[colorize:#FF0000:alpha",
 	})
 	local meta = player:get_meta()
 	meta:set_int("current_beacon", 1)
@@ -59,12 +58,11 @@ minetest.register_globalstep(function()
 			-player:get_look_horizontal()
 		)
 		offset.y = 0
-		if offset:length() > radar_dist then
-			offset = offset:normalize()
-			player:hud_change(beacon_hud_id, "offset", { x = offset.x * 70 + 100, y = -offset.z * 70 })
-		else
-			offset = offset / radar_dist
-			player:hud_change(beacon_hud_id, "offset", { x = offset.x * 70 + 100, y = -offset.z * 70 })
-		end
+		offset = offset / radar_dist
+		offset = offset * 70
+		offset = offset:apply(function(n)
+			return math.max(-50, math.min(45, n))
+		end)
+		player:hud_change(beacon_hud_id, "offset", { x = offset.x - 70, y = -offset.z - 64 })
 	end
 end)
