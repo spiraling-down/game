@@ -37,3 +37,18 @@ minetest.register_chatcommand("giveall", {
 		return true, "Added resources to inventory."
 	end,
 })
+
+local min, max, total, count = math.huge, -math.huge, 0, 0
+for i, on_generated in ipairs(minetest.registered_on_generateds) do
+	minetest.registered_on_generateds[i] = function(...)
+		local time_us = minetest.get_us_time()
+		on_generated(...)
+		local dtime_ms = (minetest.get_us_time() - time_us) / 1e3
+		min = math.min(min, dtime_ms)
+		max = math.max(max, dtime_ms)
+		total = total + dtime_ms
+		count = count + 1
+		local avg = total / count
+		minetest.chat_send_all(("on generated: cur: %g; avg: %g; min: %g; max: %g"):format(dtime_ms, avg, min, max))
+	end
+end
