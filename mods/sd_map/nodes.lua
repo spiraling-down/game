@@ -141,35 +141,34 @@ local nodes = {
 						_children = {
 							frozen = { _variants = 4 },
 							green = { _variants = 4 },
-							magmatic = { _variants = 4 },
+							magmatic = {
+								_variants = 4,
+								_add_particlespawner = function(pos)
+									return minetest.add_particlespawner({
+										amount = 10,
+										time = 0,
+										pos = {
+											min = pos:subtract(0.5),
+											max = pos:add(0.5),
+										},
+										vel = {
+											min = vector.new(-1, 0.5, -1),
+											max = vector.new(1, 2, 1),
+										},
+										drag = 0.75,
+										acc = vector.new(0, -2, 0),
+										size = {},
+										exptime = {
+											min = 1,
+											max = 3,
+										},
+										texpool = particle_texpool("smoldering", 4),
+										collisiondetection = true,
+										collision_removal = true,
+									})
+								end,
+							},
 						},
-					},
-					magmatic = {
-						_add_particlespawner = function(pos)
-							return minetest.add_particlespawner({
-								amount = 10,
-								time = 0,
-								pos = {
-									min = pos:subtract(0.5),
-									max = pos:add(0.5),
-								},
-								vel = {
-									min = vector.new(-1, 0.5, -1),
-									max = vector.new(1, 2, 1),
-								},
-								drag = 0.75,
-								acc = vector.new(0, -2, 0),
-								size = {},
-								exptime = {
-									min = 1,
-									max = 3,
-								},
-								texpool = particle_texpool("smoldering", 4),
-								collisiondetection = true,
-								collision_removal = true,
-							})
-						end,
-						_variants = 4,
 					},
 				},
 			}),
@@ -318,7 +317,9 @@ local function register_nodes(pathname, name, def)
 							minetest.register_node(
 								ore_node_name,
 								modlib.table.deep_add_all(modlib.table.deep_add_all(table.copy(node_def), tier_def), {
-									tiles = { node_def.tiles[1] .. "^" .. ore_texture(ore_name, tier_name, ore_variant) },
+									tiles = {
+										node_def.tiles[1] .. "^" .. ore_texture(ore_name, tier_name, ore_variant),
+									},
 									on_dig = dig_and_give(drop_name, tier_def._drop_count),
 								})
 							)

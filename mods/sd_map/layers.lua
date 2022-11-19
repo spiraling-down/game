@@ -128,7 +128,7 @@ layers = {
 				-- "stalagmite_basalt",
 				"grass",
 				"mushrooms_glowing_green",
-				"grass_magmatic",
+				"grass_glowing_magmatic",
 			},
 			ceiling = {
 				-- "stalactite_basalt",
