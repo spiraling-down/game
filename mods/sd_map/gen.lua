@@ -150,8 +150,8 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 	local varea = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
 	local ystride, zstride = varea.ystride, varea.zstride
 	local data = vmanip:get_data()
-	local param2_data = {} -- HACK absent values default to 0
-	assert(#data ~= 0)
+	local param2_data = vmanip:get_param2_data()
+	assert(#data ~= 0 and #param2_data ~= 0)
 
 	-- Determine the slice of layers applying to this mapblock using two linear searches:
 
