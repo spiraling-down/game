@@ -104,7 +104,7 @@ local function get_caves(minp)
 	return caves
 end
 
-minetest.register_on_generated(function(minp, maxp)
+minetest.register_on_generated(function(minp, maxp, blockseed)
 	local y_top, y_bottom = maxp.y, minp.y
 
 	if layers[1].y_transition < y_bottom then
@@ -115,6 +115,7 @@ minetest.register_on_generated(function(minp, maxp)
 
 	-- Read
 	local reseed = math_random(2 ^ 31 - 1) -- generate seed for reseeding
+	math_randomseed(blockseed) -- seed random for this chunk
 	local vmanip = minetest.get_mapgen_object("voxelmanip")
 	local emin, emax = vmanip:get_emerged_area()
 	local varea = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
@@ -161,9 +162,7 @@ minetest.register_on_generated(function(minp, maxp)
 					top = math_min(y_top, math_floor(layer.y_top + layer.noise:get_2d(xz_point)))
 				end
 				for _ = bottom, top do
-					-- NOTE: `math.random` is used because it is by far the fastest RNG;
-					-- determinism is not needed when randomizing nodes
-					data[y_index] = cids[math_random(1, #cids)]
+					data[y_index] = cids[math_random(1, #cids)] -- NOTE: random has been seeded
 					y_index = y_index + ystride -- y++
 				end
 
