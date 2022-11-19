@@ -122,6 +122,7 @@ local nodes = {
 		sunlight_propagates = true,
 		paramtype = "light",
 		paramtype2 = "facedir", -- allow randomizing rotations
+		use_texture_alpha = "clip",
 		_children = {
 			flower = plant({
 				_children = {
