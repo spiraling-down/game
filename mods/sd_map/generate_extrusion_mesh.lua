@@ -122,12 +122,5 @@ return function(texname, meshname)
 	end
 	f:close()
 
-	for y = 0, res - 1 do
-		for x = 0, res - 1 do
-			io.write(is_transparent(x, y) and "X" or " ")
-		end
-		io.write("\n")
-	end
-
 	return res
 end
