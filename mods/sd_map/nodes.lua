@@ -138,6 +138,7 @@ local nodes = {
 					saturnium = { _variants = 4 },
 					dry = { _variants = 4 },
 					glowing = {
+						_variants = 0, -- otherwise this is inherited
 						_children = {
 							frozen = { _variants = 4 },
 							green = { _variants = 4 },
@@ -236,6 +237,7 @@ local nodes = {
 					saturnium = { _variants = 4 },
 					dry = { _variants = 4 },
 					glowing = {
+						_variants = 0, -- otherwise this is inherited
 						_children = {
 							frozen = { _variants = 4 },
 							green = { _variants = 4 },
