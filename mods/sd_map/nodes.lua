@@ -125,32 +125,23 @@ local nodes = {
 		_children = {
 			flower = plant({
 				_children = {
-					blue = {
-						_variants = 4,
-					},
-					red = {
-						_variants = 4,
-					},
-					white = {
-						_variants = 4,
-					},
-					saturnium = {
-						_children = {
-							small = { _variants = 1 },
-							medium = { _variants = 1 },
-							large = { _variants = 1 },
-						},
-					},
+					blue = { _variants = 4 },
+					red = { _variants = 4 },
+					white = { _variants = 4 },
+					saturnium = { _variants = 4 },
 				},
 			}),
 			grass = plant({
 				_variants = 4,
 				_children = {
-					dry = {
-						_variants = 4,
-					},
-					glowing_green = {
-						_variants = 4,
+					saturnium = { _variants = 4 },
+					dry = { _variants = 4 },
+					glowing = {
+						_children = {
+							frozen = { _variants = 4 },
+							green = { _variants = 4 },
+							magmatic = { _variants = 4 },
+						},
 					},
 					magmatic = {
 						_add_particlespawner = function(pos)
@@ -181,11 +172,12 @@ local nodes = {
 			}),
 			mushroom = plant({
 				_children = {
-					glowing_green = {
-						_variants = 4,
-					},
-					glowing_blue = {
-						_variants = 4,
+					glowing = {
+						_children = {
+							frozen = { _variants = 4 },
+							green = { _variants = 4 },
+							magmatic = { _variants = 4 },
+						},
 					},
 				},
 			}),
@@ -236,7 +228,21 @@ local nodes = {
 				_drawtype = "plate",
 				_variants = 8,
 			},
-			-- TODO vines, multi-node decorations (stalactites, stalagmites, icicles), complete decorations
+			vines = plant({
+				_variants = 4,
+				_children = {
+					saturnium = { _variants = 4 },
+					dry = { _variants = 4 },
+					glowing = {
+						_children = {
+							frozen = { _variants = 4 },
+							green = { _variants = 4 },
+							magmatic = { _variants = 4 },
+						},
+					},
+				},
+			}),
+			-- TODO multi-node decorations (stalactites, stalagmites, icicles), complete decorations
 		},
 	},
 }
