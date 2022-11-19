@@ -138,7 +138,6 @@ local nodes = {
 					saturnium = { _variants = 4 },
 					dry = { _variants = 4 },
 					glowing = {
-						_variants = 0, -- otherwise this is inherited
 						_children = {
 							frozen = { _variants = 4 },
 							green = { _variants = 4 },
@@ -237,7 +236,6 @@ local nodes = {
 					saturnium = { _variants = 4 },
 					dry = { _variants = 4 },
 					glowing = {
-						_variants = 0, -- otherwise this is inherited
 						_children = {
 							frozen = { _variants = 4 },
 							green = { _variants = 4 },
@@ -337,7 +335,8 @@ local function register_nodes(pathname, name, def)
 	if def._children then
 		for child_name, child_def in pairs(def._children) do
 			local parent_def = table.copy(def)
-			parent_def._children = nil
+			-- Do not inherit these properties
+			parent_def._children, parent_def._variants, parent_def._ore_bearing = nil, nil, nil
 			modlib.table.deep_add_all(parent_def, { groups = { [name] = 1 } })
 			modlib.table.deep_add_all(parent_def, child_def)
 			register_nodes(pathname .. "_" .. child_name, child_name, parent_def)
