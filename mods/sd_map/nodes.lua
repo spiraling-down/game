@@ -164,6 +164,8 @@ local nodes = {
 									max = 3,
 								},
 								texpool = particle_texpool("smoldering", 4),
+								collisiondetection = true,
+								collision_removal = true,
 							})
 						end,
 						_variants = 4,
