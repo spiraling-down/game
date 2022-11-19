@@ -2,7 +2,7 @@ local modname = minetest.get_current_modname()
 
 local require = modlib.mod.require
 
-local nodes, _layers = require("nodes"), require("layers")
+local nodes, _layers, deco_groups = require("nodes"), require("layers"), require("gen_deco_groups")
 
 local assert, ipairs, pairs = assert, ipairs, pairs
 
@@ -15,19 +15,46 @@ local minetest_hash_node_position = minetest.hash_node_position
 
 local c_air = minetest.CONTENT_AIR
 
+local variant_cids_by_nodename = modlib.func.memoize(function(nodename)
+	local cids = {}
+	for variant = 1, assert(nodes[nodename], nodename)._variants do
+		cids[variant] = minetest.get_content_id(("%s:%s_%d"):format(modname, nodename, variant))
+	end
+	assert(#cids > 0)
+	return cids
+end)
+
+-- Build list of weighted choices; choices may appear multiple times according to their weight
+local nodename_choices_by_group = modlib.func.memoize(function(group)
+	local list = {}
+	for nodename, count in pairs(assert(deco_groups[group], group)) do
+		local _ = variant_cids_by_nodename["deco_" .. nodename] -- initialize cids
+		for _ = 1, count do
+			table.insert(list, "deco_" .. nodename)
+		end
+	end
+	assert(#list > 0)
+	return list
+end)
+
+local function preprocess_decos(decogroups)
+	local base_node_names = {}
+	for i, decogroup in ipairs(decogroups) do
+		base_node_names[i] = nodename_choices_by_group[decogroup]
+	end
+	return base_node_names
+end
+
 -- Layer preprocessing for generation
 local layers = {}
 do
 	local transition = 10
 	local y = 10
 	for i, layer in ipairs(_layers) do
-		local cids = {}
-		for variant = 1, assert(nodes[layer.node], layer.node)._variants do
-			cids[variant] = minetest.get_content_id(("%s:%s_%d"):format(modname, layer.node, variant))
-		end
-		assert(#cids > 0)
 		layers[i] = {
-			cids = cids,
+			cids = variant_cids_by_nodename[layer.node],
+			deco_floor_groups = preprocess_decos(layer.decorations.floor or {}),
+			deco_ceil_groups = preprocess_decos(layer.decorations.ceiling or {}),
 			y_transition = y,
 			y_top = y - (layer.transition or transition),
 		}
@@ -70,6 +97,8 @@ local min_radii, max_radii = vec(10, 5, 10), vec(20, 8, 20)
 local chunk_size = 40 -- TODO this is not optimal due to offsets
 local min_caves_per_chunk = 2
 local max_caves_per_chunk = 4
+local min_deco_grp_density, max_deco_grp_density = 5e-3, 2e-2
+local min_deco_grp_size, max_deco_grp_size = 1, 9
 
 local function seed_random(minp)
 	-- We can't use hash_node_position for this as the randomseed must fit in an int
@@ -121,6 +150,7 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 	local varea = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
 	local ystride, zstride = varea.ystride, varea.zstride
 	local data = vmanip:get_data()
+	local param2_data = {} -- HACK absent values default to 0
 	assert(#data ~= 0)
 
 	-- Determine the slice of layers applying to this mapblock using two linear searches:
@@ -140,37 +170,39 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 	-- Generate map: Loop over nodes in Z-X-Y order;
 	-- this is not optimal for cache locality (Z-Y-X would be optimal),
 	-- but it is required to minimize expensive perlin noise calls
-	local z_index = varea:indexp(minp)
-	local xz_point = { x = 0, y = 0 }
-	for z = minp.z, maxp.z do
-		xz_point.y = z
-		local x_index = z_index
-		for x = minp.x, maxp.x do
-			xz_point.x = x
-			local y_index = x_index
-			-- Iterate through layers from lowest to highest
-			local bottom = y_bottom
-			for layer_idx = max_layer_idx, min_layer_idx, -1 do
-				local layer = layers[layer_idx]
-				local cids = layer.cids
-				local top
-				if layer_idx > 1 and layer_idx == min_layer_idx then
-					-- The first layer of this block must go to the top unless the layer above it is the implicit air layer
-					top = y_top
-				else
-					-- Randomize transitions between layers using perlin noise
-					top = math_min(y_top, math_floor(layer.y_top + layer.noise:get_2d(xz_point)))
-				end
-				for _ = bottom, top do
-					data[y_index] = cids[math_random(1, #cids)] -- NOTE: random has been seeded
-					y_index = y_index + ystride -- y++
-				end
+	do
+		local z_index = varea:indexp(minp)
+		local xz_point = { x = 0, y = 0 }
+		for z = minp.z, maxp.z do
+			xz_point.y = z
+			local x_index = z_index
+			for x = minp.x, maxp.x do
+				xz_point.x = x
+				local y_index = x_index
+				-- Iterate through layers from lowest to highest
+				local bottom = y_bottom
+				for layer_idx = max_layer_idx, min_layer_idx, -1 do
+					local layer = layers[layer_idx]
+					local cids = layer.cids
+					local top
+					if layer_idx > 1 and layer_idx == min_layer_idx then
+						-- The first layer of this block must go to the top unless the layer above it is the implicit air layer
+						top = y_top
+					else
+						-- Randomize transitions between layers using perlin noise
+						top = math_min(y_top, math_floor(layer.y_top + layer.noise:get_2d(xz_point)))
+					end
+					for _ = bottom, top do
+						data[y_index] = cids[math_random(1, #cids)] -- NOTE: random has been seeded
+						y_index = y_index + ystride -- y++
+					end
 
-				bottom = top + 1
+					bottom = top + 1
+				end
+				x_index = x_index + 1
 			end
-			x_index = x_index + 1
+			z_index = z_index + zstride -- z++
 		end
-		z_index = z_index + zstride -- z++
 	end
 
 	-- NOTE: This could be used to clear spheres but would be less efficient
@@ -341,8 +373,115 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 		end
 	end
 
+	-- Determine spots for floor decorations; largely redundant with the layer-iterating loop above,
+	-- but Lua has no macros and I don't want to incur function call overhead
+	local floor_deco_spots_by_layer = {}
+	for layer_idx = min_layer_idx, max_layer_idx do
+		floor_deco_spots_by_layer[layer_idx - min_layer_idx + 1] = { list = {}, map = {}, layer = layers[layer_idx] }
+	end
+	do
+		local margin = 2 -- keep a distance to other chunks so that we don't get noticeable "lines" at chunk borders
+		local z_index = varea:indexp(minp:offset(margin, 0, margin))
+		local xz_point = { x = 0, y = 0 }
+		for z = minp.z + margin, maxp.z - margin do
+			xz_point.y = z
+			local x_index = z_index
+			for x = minp.x + margin, maxp.x - margin do
+				xz_point.x = x
+				local y_index = x_index + ystride -- NOTE: offset Y by one
+				-- Iterate through layers from lowest to highest
+				local bottom = y_bottom + 1 -- Y offset
+				for layer_idx = max_layer_idx, min_layer_idx, -1 do
+					local layer = layers[layer_idx]
+					local floor_deco_spots = floor_deco_spots_by_layer[layer_idx - min_layer_idx + 1]
+					local map, list = floor_deco_spots.map, floor_deco_spots.list
+					local top
+					if layer_idx > 1 and layer_idx == min_layer_idx then
+						-- The first layer of this block must go to the top unless the layer above it is the implicit air layer
+						top = y_top - 1 -- NOTE: -1 as we always check the block above
+					else
+						-- Randomize transitions between layers using perlin noise
+						top = math_min(y_top, math_floor(layer.y_top + layer.noise:get_2d(xz_point)))
+					end
+					for _ = bottom, top do
+						local next_y_index = y_index + ystride
+						if data[next_y_index] == c_air and data[y_index] ~= c_air then
+							local list_i = #list + 1
+							map[next_y_index] = list_i
+							list[list_i] = next_y_index
+						end
+						y_index = next_y_index -- y++
+					end
+
+					bottom = top + 1
+				end
+				x_index = x_index + 1
+			end
+			z_index = z_index + zstride -- z++
+		end
+	end
+
+	-- Place floor decorations
+	for i = 1, #floor_deco_spots_by_layer do
+		local floor_deco_spots = floor_deco_spots_by_layer[i]
+		local list, map, layer = floor_deco_spots.list, floor_deco_spots.map, floor_deco_spots.layer
+		local floor_groups = layer.deco_floor_groups
+		if #floor_groups > 0 then
+			local deco_grps = math_floor(
+				(min_deco_grp_density + (max_deco_grp_density - min_deco_grp_density) * math_random()) * #list + 0.5
+			)
+			for _ = 1, deco_grps do
+				local nodenames = floor_groups[math_random(#floor_groups)]
+				local to_place = -- NOTE: x^2 applied to x in [0, 1) skews the distribution towards smaller sizes
+					math_floor(min_deco_grp_size + math_random() ^ 2 * (max_deco_grp_size - min_deco_grp_size) + 0.5)
+				local init_idx = list[math_random(1, #list)]
+				if not init_idx then
+					break
+				end
+				local cand_list, cand_set = { init_idx }, { [init_idx] = true }
+				while to_place > 0 and #cand_list > 0 do
+					-- Pick a candidate
+					local cand_idx = math_random(#cand_list)
+					local vm_idx = cand_list[cand_idx]
+					-- Place decoration
+					-- HACK always randomize param2, even though decos with paramtype2 = "none" don't need it
+					local cids = variant_cids_by_nodename[nodenames[math_random(#nodenames)]]
+					data[vm_idx], param2_data[vm_idx] = cids[math_random(#cids)], math_random(0, 3)
+					to_place = to_place - 1
+					-- Delete from list & map
+					local list_idx = map[vm_idx]
+					local moved_vm_idx = list[#list]
+					-- Fast deletion using a swap
+					list[list_idx] = moved_vm_idx
+					list[#list] = nil
+					-- Update index
+					map[moved_vm_idx] = list_idx
+					map[vm_idx] = nil
+					-- Remove from pickable candidates; don't remove from the set
+					local last_candidate = cand_list[#cand_list]
+					cand_list[cand_idx] = last_candidate
+					cand_list[#cand_list] = nil
+					-- Loop over neighboring decoration candidates
+					-- NOTE: We don't have to worry about index wraparounds here
+					-- because we have ensured a margin of at least 1 for X, Y, Z
+					for dxidx = vm_idx - 1, vm_idx + 1 do
+						for dxyidx = dxidx - ystride, dxidx + ystride, ystride do
+							for dxyzidx = dxyidx - zstride, dxyidx + zstride, zstride do
+								if map[dxyzidx] and not cand_set[dxyzidx] then
+									cand_list[#cand_list + 1] = dxyzidx
+									cand_set[dxyzidx] = true
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
 	-- Write
 	vmanip:set_data(data)
+	vmanip:set_param2_data(param2_data)
 	vmanip:write_to_map()
 	math_randomseed(reseed) -- reseed the random
 end)

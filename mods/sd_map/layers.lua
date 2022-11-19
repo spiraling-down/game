@@ -1,5 +1,6 @@
--- NOTE: `transition = n` is supported but currently unused
--- TODO: Use `weather`, `inclusions` and `decorations`
+-- NOTE: `transition = n` is supported but currently unused;
+-- problematic groups have been outcommented
+-- TODO: Use `weather`, `inclusions`
 layers = {
 	{
 		name = "Near Absolute Zero",
@@ -17,14 +18,14 @@ layers = {
 		inclusions = { "sand_frozen", "granite_frozen_subdued" },
 		decorations = {
 			floor = {
-				"glowing_mushrooms_frozen",
+				"mushrooms_glowing_frozen",
 				"debris_frozen",
 				"pile_snow",
-				"icicle_floor",
+				-- "icicle_floor",
 			},
 			ceiling = {
 				"vines_glowing_frozen",
-				"icicle_ceiling",
+				-- "icicle_ceiling",
 			},
 		},
 	},
@@ -36,14 +37,14 @@ layers = {
 		inclusions = { "limestone", "sand_red" },
 		decorations = {
 			floor = {
-				"glowing_mushrooms_frozen",
+				"mushrooms_glowing_frozen",
 				"debris_frozen",
 				"pile_snow",
-				"icicle_floor",
+				-- "icicle_floor",
 			},
 			ceiling = {
 				"vines_glowing_frozen",
-				"icicle_ceiling",
+				-- "icicle_ceiling",
 			},
 		},
 	},
@@ -55,12 +56,12 @@ layers = {
 		inclusions = { "limestone", "basalt", "sand_red" },
 		decorations = {
 			floor = {
-				"stalagmite_granite",
+				-- "stalagmite_granite",
 				"grass_dry",
 				"debris_dry",
 			},
 			ceiling = {
-				"stalactite_granite",
+				-- "stalactite_granite",
 				"vines_dry",
 			},
 		},
@@ -73,14 +74,14 @@ layers = {
 		inclusions = { "limestone", "basalt", "sand_red" },
 		decorations = {
 			floor = {
-				"blue_flowers",
-				"red_flowers",
-				"stalagmite_granite",
+				"flowers_blue",
+				"flowers_red",
+				-- "stalagmite_granite",
 				"grass",
-				"glowing_mushrooms_green",
+				"mushrooms_glowing_green",
 			},
 			ceiling = {
-				"stalactite_granite",
+				-- "stalactite_granite",
 				"vines",
 				"vines_glowing_green",
 			},
@@ -98,14 +99,14 @@ layers = {
 		},
 		decorations = {
 			floor = {
-				"blue_flowers",
-				"red_flowers",
-				"stalagmite_basalt",
+				"flowers_blue",
+				"flowers_red",
+				-- "stalagmite_basalt",
 				"grass",
-				"glowing_mushrooms_green",
+				"mushrooms_glowing_green",
 			},
 			ceiling = {
-				"stalactite_basalt",
+				-- "stalactite_basalt",
 				"vines_glowing_magmatic",
 				"vines",
 			},
@@ -122,15 +123,15 @@ layers = {
 		},
 		decorations = {
 			floor = {
-				"blue_flowers",
-				"red_flowers",
-				"stalagmite_basalt",
+				"flowers_blue",
+				"flowers_red",
+				-- "stalagmite_basalt",
 				"grass",
-				"glowing_mushrooms_green",
+				"mushrooms_glowing_green",
 				"grass_magmatic",
 			},
 			ceiling = {
-				"stalactite_basalt",
+				-- "stalactite_basalt",
 				"vines_glowing_magmatic",
 				"vines",
 			},

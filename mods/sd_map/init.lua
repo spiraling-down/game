@@ -1,2 +1,3 @@
-modlib.mod.require("gen")
-modlib.mod.require("spawn")
+local require = modlib.mod.require
+require("gen")
+require("spawn")
