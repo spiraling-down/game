@@ -3,17 +3,19 @@ local basic_mob = {
 	_notice_distance = 20,
 	_punch_interval = 2,
 	_walk_speed = 3,
-	_attack_type = "guided", -- options will be: melee, ballistic, straight_shot, guided_missile
+	_attack_type = "guided",
 	_attack_strength = 1,
+	_movement_type = "bat",
 
 	_persistent_properties = {
 		time_since_last_attack = 0,
 		age = 0,
+		attacking = true,
 	},
 
 	max_hp = 20,
 	physical = true,
-	collisionbox = { 0.1, 0.1, 0.1, -0.1, -0.1, -0.1 },
+	collisionbox = { 0.5, 0.5, 0.5, -0.5, -0.5, -0.5 },
 	visual_size = vector.new(1.5, 1.5, 1.5),
 	visual = "sprite", --Temporary visual
 	textures = { "sd_mobs_bat.png" }, --Temporary texture
@@ -21,8 +23,21 @@ local basic_mob = {
 	automatic_face_movement_dir = 0.0,
 	automatic_face_movement_max_rotation_per_sec = 90,
 
-	on_activate = function(self, sd, dtime)
-		--self.object:set_acceleration(vector.new(0, -9.8, 0)) --Set Gravity
+	on_activate = function(self, staticdata, dtime)
+		local data = minetest.deserialize(staticdata)
+		if data ~= nil then
+			if data.mob_type == "mantis" then
+				self._attack_type = "melee"
+				self._movement_type = "walk"
+				self._notice_distance = 10, self.object:set_acceleration(vector.new(0, -9.8, 0)) --Set Gravity
+				local prop = self.object:get_properties()
+				prop.collisionbox = { 1, 1, 1, -1, -1, -1 }
+				prop.visual_size = vector.new(2, 2, 2)
+				self.object:set_properties(prop)
+			elseif data.mob_type == "bat" then
+				--Use defaults
+			end
+		end
 	end,
 
 	on_step = function(self, dtime, moveresult)
@@ -36,13 +51,37 @@ local basic_mob = {
 				local oldvel = self.object:get_velocity()
 				self.object:set_velocity(vector.new(dir.x * self._walk_speed, oldvel.y, dir.z * self._walk_speed))
 			end
-			self.object:add_velocity(
-				vector.new(0, (self.object:get_pos():direction(player:get_pos() + vector.new(0, 2, 0))).y, 0)
-			)
+			if self._movement_type == "bat" then
+				self.object:add_velocity(
+					vector.new(0, (self.object:get_pos():direction(player:get_pos() + vector.new(0, 2, 0))).y, 0)
+				)
+			elseif self._movement_type == "walk" then
+				local prop = self.object:get_properties()
+				if dir:dot(self.object:get_velocity()) > 0.7 then
+					if self._persistent_properties.attacking then
+						if math.fmod(self._persistent_properties.age, 1) > 0.2 then
+							prop.textures = { "sd_mobs_mantis_front.png" }
+						else
+							prop.textures = { "sd_mobs_mantis_attack.png" }
+						end
+					else
+						prop.textures = { "sd_mobs_mantis_front.png" }
+					end
+				else
+					if dir:dot(self.object:get_velocity():cross(vector.new(0, 1, 0))) > 0 then
+						prop.textures = { "sd_mobs_mantis_left.png" }
+					else
+						prop.textures = { "sd_mobs_mantis_right.png" }
+					end
+				end
+				self.object:set_properties(prop)
+			end
 			--Attack if player is close enough
 			if player:get_pos():distance(self.object:get_pos()) < self._attack_distance then
+				self._persistent_properties.attacking = true
 				if self._persistent_properties.time_since_last_attack > self._punch_interval then
 					if self._attack_type == "melee" then
+						--Why does damage not work?
 						player:punch(
 							self.object,
 							self._persistent_properties.time_since_last_attack,
@@ -77,7 +116,8 @@ local basic_mob = {
 					end
 					self._persistent_properties.time_since_last_attack = 0
 				end
-				--Do an attack animation
+			else
+				--self._persistent_properties.attacking=false
 			end
 		end
 	end,
@@ -129,7 +169,6 @@ local basic_projectile = {
 				"sd_tools_acid_sprayer_droplet_4.png",
 			},
 		})
-		--start flying in launch direction (plus an upward boost)
 		if minetest.deserialize(staticdata) ~= nil then
 			local data = minetest.deserialize(staticdata)
 			self._explode_strength = data.explode_strength
@@ -152,6 +191,7 @@ local basic_projectile = {
 			--Explode, and damage all objects around
 			for _, object in pairs(minetest.get_objects_inside_radius(self.object:get_pos(), self._explode_radius)) do
 				if minetest.is_player(object) then
+					--Why does damage not work?
 					object:punch(
 						self.object,
 						1,
@@ -176,6 +216,21 @@ minetest.register_entity("sd_mobs:basic_mob", basic_mob)
 minetest.register_chatcommand("mob", {
 	description = "",
 	func = function(name, params)
-		minetest.add_entity(minetest.get_player_by_name(name):get_pos(), "sd_mobs:basic_mob")
+		minetest.add_entity(
+			minetest.get_player_by_name(name):get_pos(),
+			"sd_mobs:basic_mob",
+			minetest.serialize({ mob_type = "bat" })
+		)
+	end,
+})
+
+minetest.register_chatcommand("mob2", {
+	description = "",
+	func = function(name, params)
+		minetest.add_entity(
+			minetest.get_player_by_name(name):get_pos(),
+			"sd_mobs:basic_mob",
+			minetest.serialize({ mob_type = "mantis" })
+		)
 	end,
 })
