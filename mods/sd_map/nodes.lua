@@ -318,7 +318,7 @@ local function register_nodes(pathname, name, def)
 							minetest.register_node(
 								ore_node_name,
 								modlib.table.deep_add_all(modlib.table.deep_add_all(table.copy(node_def), tier_def), {
-									tiles = { node_def.tiles[1] .. "^" .. ore_texture(ore_name, tier_name, variant) },
+									tiles = { node_def.tiles[1] .. "^" .. ore_texture(ore_name, tier_name, ore_variant) },
 									on_dig = dig_and_give(drop_name, tier_def._drop_count),
 								})
 							)
