@@ -12,16 +12,17 @@ local skip_key = "aux1"
 local black_tex = "blank.png^[colorize:#000:255^[noalpha"
 
 function story.write_text(params)
-	local player, text, color, on_complete = params.player, params.text, params.color, params.on_complete
+	local player, text, color, on_complete, position, offset, alignment =
+		params.player, params.text, params.color, params.on_complete, params.position, params.offset, params.alignment
 	local name = player:get_player_name()
 	local hud_id = player:hud_add({
 		hud_elem_type = "text",
-		position = { x = 0, y = 1 },
+		position = position or { x = 0, y = 1 },
 		name = "sd_story:text",
 		text = "",
 		number = color and modlib.minetest.colorspec.from_any(color):to_number_rgb() or textcolor,
-		alignment = { x = 1, y = -1 }, -- right/up
-		offset = { x = 0, y = 0 },
+		alignment = alignment or { x = 1, y = -1 }, -- right/up
+		offset = offset or { x = 0, y = 0 },
 		size = { x = fontsize, y = 0 },
 		z_index = 1001, -- on top of everything, including a potential blackscreen (by convention)
 		style = 4, -- mono
@@ -57,6 +58,9 @@ local function add_blackscreen(player)
 		text = "Rebooting...",
 		color = "green",
 		on_complete = fade_blackscreen,
+		position={x=0.5,y=0.5},
+		offset={x=-20,y=0},
+		alignment={x=1,y=-1},
 	})
 end
 
