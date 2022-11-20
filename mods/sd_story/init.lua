@@ -58,9 +58,9 @@ local function add_blackscreen(player)
 		text = "Rebooting...",
 		color = "green",
 		on_complete = fade_blackscreen,
-		position={x=0.5,y=0.5},
-		offset={x=-20,y=0},
-		alignment={x=1,y=-1},
+		position = { x = 0.5, y = 0.5 },
+		offset = { x = -20, y = 0 },
+		alignment = { x = 1, y = -1 },
 	})
 end
 
