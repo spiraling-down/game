@@ -150,8 +150,8 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 	local varea = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
 	local ystride, zstride = varea.ystride, varea.zstride
 	local data = vmanip:get_data()
-	local param2_data = vmanip:get_param2_data()
-	assert(#data ~= 0 and #param2_data ~= 0)
+	local param2_data = {} -- HACK absent values default to 0
+	assert(#data ~= 0)
 
 	-- Determine the slice of layers applying to this mapblock using two linear searches:
 
@@ -375,15 +375,9 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 
 	-- Determine spots for floor decorations; largely redundant with the layer-iterating loop above,
 	-- but Lua has no macros and I don't want to incur function call overhead
-	local deco_spots_by_layer = {}
+	local floor_deco_spots_by_layer = {}
 	for layer_idx = min_layer_idx, max_layer_idx do
-		deco_spots_by_layer[layer_idx - min_layer_idx + 1] = {
-			ceil_list = {},
-			ceil_map = {},
-			floor_list = {},
-			floor_map = {},
-			layer = layers[layer_idx],
-		}
+		floor_deco_spots_by_layer[layer_idx - min_layer_idx + 1] = { list = {}, map = {}, layer = layers[layer_idx] }
 	end
 	do
 		local margin = 2 -- keep a distance to other chunks so that we don't get noticeable "lines" at chunk borders
@@ -399,9 +393,8 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 				local bottom = y_bottom + 1 -- Y offset
 				for layer_idx = max_layer_idx, min_layer_idx, -1 do
 					local layer = layers[layer_idx]
-					local deco_spots = deco_spots_by_layer[layer_idx - min_layer_idx + 1]
-					local floor_map, floor_list = deco_spots.floor_map, deco_spots.floor_list
-					local ceil_map, ceil_list = deco_spots.ceil_map, deco_spots.ceil_list
+					local floor_deco_spots = floor_deco_spots_by_layer[layer_idx - min_layer_idx + 1]
+					local map, list = floor_deco_spots.map, floor_deco_spots.list
 					local top
 					if layer_idx > 1 and layer_idx == min_layer_idx then
 						-- The first layer of this block must go to the top unless the layer above it is the implicit air layer
@@ -410,17 +403,12 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 						-- Randomize transitions between layers using perlin noise
 						top = math_min(y_top, math_floor(layer.y_top + layer.noise:get_2d(xz_point)))
 					end
-					for y = bottom, top do
+					for _ = bottom, top do
 						local next_y_index = y_index + ystride
-						-- NOTE: Require y < top such that there always is one block of margin for neighbor calculations
-						if data[next_y_index] == c_air and data[y_index] ~= c_air and y < top then
-							local list_i = #floor_list + 1
-							floor_map[next_y_index] = list_i
-							floor_list[list_i] = next_y_index
-						elseif data[next_y_index] ~= c_air and data[y_index] == c_air then
-							local list_i = #ceil_list + 1
-							ceil_map[y_index] = list_i
-							ceil_list[list_i] = y_index
+						if data[next_y_index] == c_air and data[y_index] ~= c_air then
+							local list_i = #list + 1
+							map[next_y_index] = list_i
+							list[list_i] = next_y_index
 						end
 						y_index = next_y_index -- y++
 					end
@@ -433,59 +421,55 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 		end
 	end
 
-	local function place_decorations(listname, mapname, groupsname)
-		for i = 1, #deco_spots_by_layer do
-			local deco_spots = deco_spots_by_layer[i]
-			local list, map, layer = deco_spots[listname], deco_spots[mapname], deco_spots.layer
-			local groups = layer[groupsname]
-			if #groups > 0 then
-				local n_grps = math_floor(
-					(min_deco_grp_density + (max_deco_grp_density - min_deco_grp_density) * math_random()) * #list + 0.5
-				)
-				for _ = 1, n_grps do
-					local nodenames = groups[math_random(#groups)]
-					local to_place = -- NOTE: x^2 applied to x in [0, 1) skews the distribution towards smaller sizes
-						math_floor(
-							min_deco_grp_size + math_random() ^ 2 * (max_deco_grp_size - min_deco_grp_size) + 0.5
-						)
-					local init_idx = list[math_random(1, #list)]
-					if not init_idx then
-						break
-					end
-					local cand_list, cand_set = { init_idx }, { [init_idx] = true }
-					while to_place > 0 and #cand_list > 0 do
-						-- Pick a candidate
-						local cand_idx = math_random(#cand_list)
-						local vm_idx = cand_list[cand_idx]
-						-- Place decoration
-						-- HACK always randomize param2, even though decos with paramtype2 = "none" don't need it
-						local cids = variant_cids_by_nodename[nodenames[math_random(#nodenames)]]
-						data[vm_idx], param2_data[vm_idx] = cids[math_random(#cids)], math_random(0, 3)
-						to_place = to_place - 1
-						-- Delete from list & map
-						local list_idx = map[vm_idx]
-						local moved_vm_idx = list[#list]
-						-- Fast deletion using a swap
-						list[list_idx] = moved_vm_idx
-						list[#list] = nil
-						-- Update index
-						map[moved_vm_idx] = list_idx
-						map[vm_idx] = nil
-						-- Remove from pickable candidates; don't remove from the set
-						local last_candidate = cand_list[#cand_list]
-						cand_list[cand_idx] = last_candidate
-						cand_list[#cand_list] = nil
-						-- Loop over neighboring decoration candidates
-						-- NOTE: We don't have to worry about index wraparounds here
-						-- because we have ensured a margin of at least 1 for X, Y, Z
-						-- TODO (?) this also considers diagonally adjacent nodes neighboring
-						for dxidx = vm_idx - 1, vm_idx + 1 do
-							for dxyidx = dxidx - ystride, dxidx + ystride, ystride do
-								for dxyzidx = dxyidx - zstride, dxyidx + zstride, zstride do
-									if map[dxyzidx] and not cand_set[dxyzidx] then
-										cand_list[#cand_list + 1] = dxyzidx
-										cand_set[dxyzidx] = true
-									end
+	-- Place floor decorations
+	for i = 1, #floor_deco_spots_by_layer do
+		local floor_deco_spots = floor_deco_spots_by_layer[i]
+		local list, map, layer = floor_deco_spots.list, floor_deco_spots.map, floor_deco_spots.layer
+		local floor_groups = layer.deco_floor_groups
+		if #floor_groups > 0 then
+			local deco_grps = math_floor(
+				(min_deco_grp_density + (max_deco_grp_density - min_deco_grp_density) * math_random()) * #list + 0.5
+			)
+			for _ = 1, deco_grps do
+				local nodenames = floor_groups[math_random(#floor_groups)]
+				local to_place = -- NOTE: x^2 applied to x in [0, 1) skews the distribution towards smaller sizes
+					math_floor(min_deco_grp_size + math_random() ^ 2 * (max_deco_grp_size - min_deco_grp_size) + 0.5)
+				local init_idx = list[math_random(1, #list)]
+				if not init_idx then
+					break
+				end
+				local cand_list, cand_set = { init_idx }, { [init_idx] = true }
+				while to_place > 0 and #cand_list > 0 do
+					-- Pick a candidate
+					local cand_idx = math_random(#cand_list)
+					local vm_idx = cand_list[cand_idx]
+					-- Place decoration
+					-- HACK always randomize param2, even though decos with paramtype2 = "none" don't need it
+					local cids = variant_cids_by_nodename[nodenames[math_random(#nodenames)]]
+					data[vm_idx], param2_data[vm_idx] = cids[math_random(#cids)], math_random(0, 3)
+					to_place = to_place - 1
+					-- Delete from list & map
+					local list_idx = map[vm_idx]
+					local moved_vm_idx = list[#list]
+					-- Fast deletion using a swap
+					list[list_idx] = moved_vm_idx
+					list[#list] = nil
+					-- Update index
+					map[moved_vm_idx] = list_idx
+					map[vm_idx] = nil
+					-- Remove from pickable candidates; don't remove from the set
+					local last_candidate = cand_list[#cand_list]
+					cand_list[cand_idx] = last_candidate
+					cand_list[#cand_list] = nil
+					-- Loop over neighboring decoration candidates
+					-- NOTE: We don't have to worry about index wraparounds here
+					-- because we have ensured a margin of at least 1 for X, Y, Z
+					for dxidx = vm_idx - 1, vm_idx + 1 do
+						for dxyidx = dxidx - ystride, dxidx + ystride, ystride do
+							for dxyzidx = dxyidx - zstride, dxyidx + zstride, zstride do
+								if map[dxyzidx] and not cand_set[dxyzidx] then
+									cand_list[#cand_list + 1] = dxyzidx
+									cand_set[dxyzidx] = true
 								end
 							end
 						end
@@ -494,8 +478,6 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 			end
 		end
 	end
-	place_decorations("floor_list", "floor_map", "deco_floor_groups")
-	place_decorations("ceil_list", "ceil_map", "deco_ceil_groups")
 
 	-- Write
 	vmanip:set_data(data)

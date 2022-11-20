@@ -57,8 +57,8 @@ return {
 		grass = 2,
 		grass_saturnium = 1,
 	},
-	grass_glowing_magmatic = {
-		grass_glowing_magmatic = 3,
+	grass_magmatic = {
+		grass_magmatic = 3,
 		grass = 1,
 	},
 	pile_ash = {
