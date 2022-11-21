@@ -207,6 +207,7 @@ local scale_dropoff = function(depth)
 	return (3.25 - 2 / (1 + 2 ^ (-0.1 * math.abs(depth)))) * 0.5
 end
 
+local ended = false
 minetest.register_globalstep(function()
 	for _, player in pairs(minetest.get_connected_players()) do
 		local meta = player:get_meta()
@@ -254,5 +255,56 @@ minetest.register_globalstep(function()
 			{ x = alien_offset.x - 70 * 3 / 2, y = -alien_offset.z - 64 * 3 / 2 }
 		)
 		player:hud_change(alien_beacon_hud_id, "scale", { x = alien_depth_scalar, y = alien_depth_scalar })
+
+		--Endgame
+		if player:get_pos().y < -500 and not ended then
+			ended = true
+			--blackscreen copied from sd_story
+			player:hud_add({
+				hud_elem_type = "image",
+				position = { x = 0.5, y = 0.5 },
+				name = "sd_beacons:endgame_blackscreen",
+				scale = { x = -100, y = -100 },
+				text = "blank.png^[colorize:#000:255^[noalpha",
+				z_index = 1000,
+			})
+			if a_current_beacon >= 6 and h_current_beacon <= 4 then
+				--Alien Ending
+				story.write_text({
+					player = player,
+					text = "Insert Text for Alien Ending",
+					color = "#FFFFFF",
+					position = { x = 0.5, y = 0.5 },
+					alignment = { x = 0, y = 0 },
+				})
+			elseif h_current_beacon >= 6 and a_current_beacon <= 4 then
+				--Human Ending
+				story.write_text({
+					player = player,
+					text = "Insert Text for Human Ending",
+					color = "#FFFFFF",
+					position = { x = 0.5, y = 0.5 },
+					alignment = { x = 0, y = 0 },
+				})
+			elseif h_current_beacon >= 6 and a_current_beacon >= 6 then
+				--Good Ending
+				story.write_text({
+					player = player,
+					text = "Insert Text for Good Ending",
+					color = "#FFFFFF",
+					position = { x = 0.5, y = 0.5 },
+					alignment = { x = 0, y = 0 },
+				})
+			else
+				--Bad Ending
+				story.write_text({
+					player = player,
+					text = "Insert Text for Bad Ending",
+					color = "#FFFFFF",
+					position = { x = 0.5, y = 0.5 },
+					alignment = { x = 0, y = 0 },
+				})
+			end
+		end
 	end
 end)
