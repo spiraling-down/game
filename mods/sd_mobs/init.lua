@@ -1,284 +1,311 @@
-local basic_mob = {
-	_attack_distance = 5,
-	_notice_distance = 20,
-	_punch_interval = 4,
-	_walk_speed = 3,
-	_attack_type = "guided",
-	_attack_strength = 1,
-	_movement_type = "bat",
+local radar_dist = 100
+local beacon_spread = 300
 
-	_persistent_properties = {
-		time_since_last_attack = 0,
-		age = 0,
-		attacking = true,
-	},
-
-	max_hp = 20,
-	physical = true,
-	collisionbox = { 0.5, 0.5, 0.5, -0.5, -0.5, -0.5 },
-	visual_size = vector.new(1.5, 1.5, 1.5),
-	visual = "sprite", --Temporary visual
-	textures = { "sd_mobs_bat.png" }, --Temporary texture
-	stepheight = 1.1,
-	automatic_face_movement_dir = 0.0,
-	automatic_face_movement_max_rotation_per_sec = 90,
-
-	on_activate = function(self, staticdata, dtime)
-		self.object:set_armor_groups({ acid = 100 })
-		local data = minetest.deserialize(staticdata)
-		if data ~= nil then
-			if data.mob_type == "mantis" then
-				self._attack_type = "melee"
-				self._movement_type = "walk"
-				self._notice_distance = 10, self.object:set_acceleration(vector.new(0, -9.8, 0)) --Set Gravity
-				local prop = self.object:get_properties()
-				prop.collisionbox = { 1, 1, 1, -1, -1, -1 }
-				prop.visual_size = vector.new(2, 2, 2)
-				self.object:set_properties(prop)
-			elseif data.mob_type == "bat" then
-				--Use defaults
-			end
-		end
-	end,
-
-	on_step = function(self, dtime, moveresult)
-		self._persistent_properties.time_since_last_attack = self._persistent_properties.time_since_last_attack
-			+ dtime / 100
-		self._persistent_properties.age = self._persistent_properties.age + dtime / 100
-		--Assuming only singleplayer
-		for _, player in pairs(minetest.get_connected_players()) do
-			--Move towards player if close enough
-			local dir = self.object:get_pos():direction(player:get_pos())
-			if player:get_pos():distance(self.object:get_pos()) < self._notice_distance then
-				local oldvel = self.object:get_velocity()
-				self.object:set_velocity(vector.new(dir.x * self._walk_speed, oldvel.y, dir.z * self._walk_speed))
-			end
-			if self._movement_type == "bat" then
-				self.object:add_velocity(
-					vector.new(0, (self.object:get_pos():direction(player:get_pos() + vector.new(0, 2, 0))).y, 0)
-				)
-			elseif self._movement_type == "walk" then
-				local prop = self.object:get_properties()
-				if dir:dot(self.object:get_velocity()) > 0.7 then
-					if self._persistent_properties.attacking then
-						if math.fmod(self._persistent_properties.age, 1) > 0.2 then
-							prop.textures = { "sd_mobs_mantis_front.png" }
-						else
-							prop.textures = { "sd_mobs_mantis_attack.png" }
-						end
-					else
-						prop.textures = { "sd_mobs_mantis_front.png" }
-					end
-				else
-					if dir:dot(self.object:get_velocity():cross(vector.new(0, 1, 0))) > 0 then
-						prop.textures = { "sd_mobs_mantis_left.png" }
-					else
-						prop.textures = { "sd_mobs_mantis_right.png" }
-					end
-				end
-				self.object:set_properties(prop)
-			end
-			--Attack if player is close enough
-			if player:get_pos():distance(self.object:get_pos()) < self._attack_distance then
-				self._persistent_properties.attacking = true
-				if self._persistent_properties.time_since_last_attack > self._punch_interval then
-					if self._attack_type == "melee" then
-						player:punch(
-							self.object,
-							self._persistent_properties.time_since_last_attack,
-							{
-								full_punch_interval = 1.0,
-								max_drop_level = 0,
-								damage_groups = { fleshy = self._attack_strength },
-							}, --temporary damage groups
-							dir
-						)
-					elseif self._attack_type == "ballistic" then
-						minetest.add_entity(
-							self.object:get_pos(),
-							"sd_mobs:basic_projectile",
-							minetest.serialize({
-								offset = player:get_pos() - self.object:get_pos(),
-								explode_strength = self._attack_strength,
-								type = "ballistic",
-							})
-						)
-					elseif self._attack_type == "guided" then
-						minetest.add_entity(
-							self.object:get_pos(),
-							"sd_mobs:basic_projectile",
-							minetest.serialize({
-								offset = player:get_pos() - self.object:get_pos(),
-								explode_strength = self._attack_strength,
-								type = "guided",
-								target_player_name = player:get_player_name(), --minetest cannot serialize userdata, so send name instead
-							})
-						)
-					end
-					minetest.chat_send_all(self._persistent_properties.time_since_last_attack)
-					self._persistent_properties.time_since_last_attack = 0
-				end
-			else
-				--self._persistent_properties.attacking=false
-			end
-		end
-	end,
+local human_beacons = {
+	"sd_beacons:human_regular",
+	"sd_beacons:human_frozen",
+	"sd_beacons:human_red",
+}
+local alien_beacons = {
+	"sd_beacons:alien_regular",
+	"sd_beacons:alien_frozen",
+	"sd_beacons:alien_red",
 }
 
---Math makes a perfect ballistic shot when you are standing below the mob, otherwise it makes a horrible shot
-local find_vel_needed = function(offset)
-	local yoffset = offset.y
-	local horizontal_offset = (offset - vector.new(0, offset.y, 0))
-	local horizontal_dist = (offset - vector.new(0, offset.y, 0)):length()
-	if yoffset < 0 then
-		return horizontal_offset / (math.sqrt(2 * yoffset * -9.8)) * 9.8
-	else
-		local vy = horizontal_dist + yoffset
-		yoffset = yoffset + 3
-		local t = (vy + math.sqrt(vy * vy + 4 * yoffset * 9.8 / 2)) / (2 * yoffset)
-		return vector.new(0, vy, 0) + (horizontal_offset / t) * 3
+local get_beacon_pos = function(beacon_number, beacon_type)
+	local seed
+	if beacon_type == "human" then
+		seed = minetest.get_mapgen_setting("seed") + beacon_number
+	elseif beacon_type == "alien" then
+		seed = minetest.get_mapgen_setting("seed") + beacon_number + 100
+	end
+	local random = PcgRandom(seed)
+	--beacons get deeper as you progress
+	return vector.new(
+		random:next(-beacon_spread, beacon_spread),
+		random:next(-beacon_spread / 10 * beacon_number - 50, -beacon_spread / 10 * beacon_number),
+		random:next(-beacon_spread, beacon_spread)
+	)
+end
+
+local get_beacon_type = function(beacon_number)
+	return PcgRandom(minetest.get_mapgen_setting("seed") + beacon_number):next(1, 3)
+end
+
+local human_beacon_hud_id = nil
+local alien_beacon_hud_id = nil
+
+local spawn_beacon = function(beacon_number, beacon_type)
+	local pos = get_beacon_pos(beacon_number, beacon_type)
+	minetest.emerge_area(pos - vector.new(1, 1, 1), pos + vector.new(1, 1, 1))
+	minetest.after(0.5, function()
+		if beacon_type == "human" then
+			minetest.set_node(pos, { name = human_beacons[get_beacon_type(beacon_number)] })
+		else
+			minetest.set_node(pos, { name = alien_beacons[get_beacon_type(beacon_number)] })
+		end
+		minetest.set_node(pos + vector.new(0, 1, 0), { name = "air" })
+		minetest.set_node(pos + vector.new(1, 0, 0), { name = "air" })
+		minetest.set_node(pos + vector.new(-1, 0, 0), { name = "air" })
+		minetest.set_node(pos + vector.new(0, 0, 1), { name = "air" })
+		minetest.set_node(pos + vector.new(0, 0, -1), { name = "air" })
+	end)
+end
+
+--To be called when you get the artifact from the current beacon
+local advance_to_next_beacon = function(current_beacon, beacon_type)
+	for _, player in pairs(minetest.get_connected_players()) do
+		local meta = player:get_meta()
+		if beacon_type == "human" then
+			meta:set_int("h_current_beacon", current_beacon + 1)
+			spawn_beacon(current_beacon + 1, "human")
+		elseif beacon_type == "alien" then
+			meta:set_int("a_current_beacon", current_beacon + 1)
+			spawn_beacon(current_beacon + 1, "alien")
+		end
+		--Getting the grammar correct
+		a_or_an = "a"
+		if beacon_type == "alien" then
+			a_or_an = "an"
+		end
+
+		story.write_text({
+			player = player,
+			text = "You found " .. a_or_an .. " " .. beacon_type .. " artifact!",
+			color = "#000000",
+			position = { x = 0.5, y = 0.9 },
+			alignment = { x = 0, y = 0 },
+		})
 	end
 end
 
---Basic projectile which explodes on impact
-local basic_projectile = {
-	_explode_radius = 3,
-	_explode_strength = 1,
-	_type = "",
-	_target_player = nil,
-	_speed = 10,
-	_particlespawner_id = nil,
-
-	max_hp = 20,
-	physical = true,
-	visual_size = vector.new(0.8, 0.8, 0.8),
-	visual = "sprite", --Temporary visual
-	textures = { "sd_tools_acid_sprayer_droplet_1.png" }, --Temporary texture
-
-	on_activate = function(self, staticdata, dtime)
-		self._particlespawner_id = minetest.add_particlespawner({
-			amount = 10,
-			time = 1,
-			collisiondetection = true,
-			collision_removal = false,
-			object_collision = true,
-			attached = self.object,
-			scale = vector.new(2, 2, 2),
-			texpool = {
-				"sd_tools_acid_sprayer_droplet_1.png",
-				"sd_tools_acid_sprayer_droplet_2.png",
-				"sd_tools_acid_sprayer_droplet_3.png",
-				"sd_tools_acid_sprayer_droplet_4.png",
-			},
-		})
-		if minetest.deserialize(staticdata) ~= nil then
-			local data = minetest.deserialize(staticdata)
-			self._explode_strength = data.explode_strength
-			self._type = data.type
-			if self._type == "ballistic" then
-				self.object:set_acceleration(vector.new(0, -9.8, 0))
-				self.object:set_velocity(find_vel_needed(data.offset - vector.new(0, 1.5, 0)))
-			elseif self._type == "guided" then
-				self._target_player = minetest.get_player_by_name(data.target_player_name)
-				self.object:set_velocity((self.object:get_pos():direction(self._target_player:get_pos())) * self._speed)
-			end
-		end
-	end,
-
-	on_step = function(self, dtime, moveresult)
-		if self._type == "guided" then
-			self.object:set_velocity((self.object:get_pos():direction(self._target_player:get_pos())) * self._speed)
-		end
-		if moveresult.collides then
-			--Explode, and damage all objects around
-			for _, object in pairs(minetest.get_objects_inside_radius(self.object:get_pos(), self._explode_radius)) do
-				if minetest.is_player(object) then
-					object:punch(
-						self.object,
-						1,
-						{
-							full_punch_interval = 1.0,
-							max_drop_level = 0,
-							damage_groups = { fleshy = self._explode_strength },
-						}, --temporary damage groups
-						vector.normalize(self.object:get_velocity())
-					)
-					self.object:remove()
-				end
-			end
-		end
-	end,
-}
-
-minetest.register_entity("sd_mobs:basic_projectile", basic_projectile)
-minetest.register_entity("sd_mobs:basic_mob", basic_mob)
-
---Only for testing purposes
-minetest.register_chatcommand("mob", {
+minetest.register_node("sd_beacons:human_regular", {
 	description = "",
-	func = function(name, params)
-		minetest.add_entity(
-			minetest.get_player_by_name(name):get_pos(),
-			"sd_mobs:basic_mob",
-			minetest.serialize({ mob_type = "bat" })
-		)
+	tiles = { "sd_beacons_human_regular.png" },
+	groups = { drillable = 2 },
+	on_dig = function(pos, node, digger)
+		local meta = digger:get_meta()
+		advance_to_next_beacon(meta:get_int("h_current_beacon"), "human")
+		minetest.set_node(pos, { name = "air" })
+		return true
 	end,
 })
-
-minetest.register_chatcommand("mob2", {
+minetest.register_node("sd_beacons:human_frozen", {
 	description = "",
-	func = function(name, params)
-		minetest.add_entity(
-			minetest.get_player_by_name(name):get_pos(),
-			"sd_mobs:basic_mob",
-			minetest.serialize({ mob_type = "mantis" })
-		)
+	tiles = { "sd_beacons_human_frozen.png" },
+	groups = { drillable = 2 },
+	on_dig = function(pos, node, digger)
+		local meta = digger:get_meta()
+		advance_to_next_beacon(meta:get_int("h_current_beacon"), "human")
+		minetest.set_node(pos, { name = "air" })
+		return true
+	end,
+})
+minetest.register_node("sd_beacons:human_red", {
+	description = "",
+	tiles = { "sd_beacons_human_red.png" },
+	groups = { drillable = 2 },
+	on_dig = function(pos, node, digger)
+		local meta = digger:get_meta()
+		advance_to_next_beacon(meta:get_int("h_current_beacon"), "human")
+		minetest.set_node(pos, { name = "air" })
+		return true
 	end,
 })
 
-minetest.register_lbm({
-	label = "spawn mobs",
-	name = "sd_mobs:spawn_mobs",
-	nodenames = {
-		"sd_map:granite_frozen_1",
-		"sd_map:granite_frozen_2",
-		"sd_map:granite_frozen_3",
-		"sd_map:granite_frozen_4",
-		"sd_map:granite_semifrozen_1",
-		"sd_map:granite_semifrozen_2",
-		"sd_map:granite_semifrozen_3",
-		"sd_map:granite_semifrozen_4",
-		"sd_map:granite_1",
-		"sd_map:granite_2",
-		"sd_map:granite_3",
-		"sd_map:granite_4",
-		"sd_map:basalt_1",
-		"sd_map:basalt_2",
-		"sd_map:basalt_3",
-		"sd_map:basalt_4",
-		"sd_map:carbon_1",
-		"sd_map:carbon_2",
-		"sd_map:carbon_3",
-		"sd_map:carbon_4",
-	},
-	run_at_every_load = true,
-	action = function(pos, node)
-		--minetest.chat_send_all(minetest.get_node(pos+vector.new(0,1,0)).name)
-		if minetest.get_node(pos + vector.new(0, 1, 0)).name == "air" and pos.y < -50 then
-			if math.random() < 0.001 then
-				minetest.add_entity(
-					pos + vector.new(0, 1, 0),
-					"sd_mobs:basic_mob",
-					minetest.serialize({ mob_type = "bat" })
-				)
-			end
-			if math.random() > 0.999 then
-				minetest.add_entity(
-					pos + vector.new(0, 1, 0),
-					"sd_mobs:basic_mob",
-					minetest.serialize({ mob_type = "mantis" })
-				)
+minetest.register_node("sd_beacons:alien_regular", {
+	description = "",
+	tiles = { "sd_beacons_alien_regular.png" },
+	groups = { drillable = 2 },
+	on_dig = function(pos, node, digger)
+		local meta = digger:get_meta()
+		advance_to_next_beacon(meta:get_int("a_current_beacon"), "alien")
+		minetest.set_node(pos, { name = "air" })
+		return true
+	end,
+})
+minetest.register_node("sd_beacons:alien_frozen", {
+	description = "",
+	tiles = { "sd_beacons_alien_frozen.png" },
+	groups = { drillable = 2 },
+	on_dig = function(pos, node, digger)
+		local meta = digger:get_meta()
+		advance_to_next_beacon(meta:get_int("a_current_beacon"), "alien")
+		minetest.set_node(pos, { name = "air" })
+		return true
+	end,
+})
+minetest.register_node("sd_beacons:alien_red", {
+	description = "",
+	tiles = { "sd_beacons_alien_red.png" },
+	groups = { drillable = 2 },
+	on_dig = function(pos, node, digger)
+		local meta = digger:get_meta()
+		advance_to_next_beacon(meta:get_int("a_current_beacon"), "alien")
+		minetest.set_node(pos, { name = "air" })
+		return true
+	end,
+})
+
+local setup = function(player)
+	player:hud_add({
+		hud_elem_type = "image",
+		name = "sd_beacons:radar",
+		position = { x = 1, y = 1 },
+		z_index = 100,
+		scale = { x = 3, y = 3 },
+		offset = { x = -65 * 3 / 2, y = -65 * 3 / 2 },
+		text = "sd_beacons_compass_bg.png",
+	})
+	human_beacon_hud_id = player:hud_add({
+		hud_elem_type = "image",
+		name = "sd_beacons:human_beacon_on_compass",
+		position = { x = 1, y = 1 },
+		z_index = 100,
+		scale = { x = 1, y = 1 },
+		offset = { x = 0, y = 0 },
+		text = "sd_beacons_compass_beacon_white.png^[colorize:#A175A5:alpha",
+	})
+	alien_beacon_hud_id = player:hud_add({
+		hud_elem_type = "image",
+		name = "sd_beacons:alien_beacon_on_compass",
+		position = { x = 1, y = 1 },
+		z_index = 100,
+		scale = { x = 1, y = 1 },
+		offset = { x = 0, y = 0 },
+		text = "sd_beacons_compass_beacon_white.png^[colorize:#FFF103:alpha",
+	})
+	player:hud_add({
+		hud_elem_type = "image",
+		name = "sd_beacons:player_pos_on_compass",
+		position = { x = 1, y = 1 },
+		z_index = 100,
+		scale = { x = 0.3, y = 0.3 },
+		offset = { x = -70 * 3 / 2, y = -64 * 3 / 2 },
+		text = "sd_beacons_compass_beacon_white.png",
+	})
+	local meta = player:get_meta()
+	if meta:get_int("h_current_beacon") == 0 then
+		meta:set_int("h_current_beacon", 1)
+		spawn_beacon(1, "human")
+	else
+		spawn_beacon(meta:get_int("h_current_beacon"), "human")
+	end
+	if meta:get_int("a_current_beacon") == 0 then
+		meta:set_int("a_current_beacon", 1)
+		spawn_beacon(1, "alien")
+	else
+		spawn_beacon(meta:get_int("a_current_beacon"), "alien")
+	end
+end
+
+minetest.register_on_joinplayer(function(player)
+	setup(player)
+end)
+
+--Beacons get larger on radar as you get closer in depth
+local scale_dropoff = function(depth)
+	return (3.25 - 2 / (1 + 2 ^ (-0.1 * math.abs(depth)))) * 0.5
+end
+
+local ended = false
+minetest.register_globalstep(function()
+	for _, player in pairs(minetest.get_connected_players()) do
+		local meta = player:get_meta()
+		local h_current_beacon = meta:get_int("h_current_beacon")
+		local human_offset = (get_beacon_pos(h_current_beacon, "human") - player:get_pos()):rotate_around_axis(
+			vector.new(0, 1, 0),
+			-player:get_look_horizontal()
+		)
+		local human_depth_scalar = scale_dropoff(human_offset.y)
+		if human_offset:length() > radar_dist * 1.41 then
+			human_offset = human_offset:normalize() * radar_dist * 1.41
+		end
+		human_offset.y = 0
+		human_offset = human_offset / radar_dist
+		human_offset = human_offset * 70 * 3 / 2
+		human_offset = human_offset:apply(function(n)
+			return math.max(-50 * 3 / 2, math.min(45 * 3 / 2, n))
+		end)
+
+		local a_current_beacon = meta:get_int("a_current_beacon")
+		local alien_offset = (get_beacon_pos(a_current_beacon, "alien") - player:get_pos()):rotate_around_axis(
+			vector.new(0, 1, 0),
+			-player:get_look_horizontal()
+		)
+		local alien_depth_scalar = scale_dropoff(alien_offset.y)
+		if alien_offset:length() > radar_dist * 1.41 then
+			alien_offset = alien_offset:normalize() * radar_dist * 1.41
+		end
+		alien_offset.y = 0
+		alien_offset = alien_offset / radar_dist
+		alien_offset = alien_offset * 70 * 3 / 2
+		alien_offset = alien_offset:apply(function(n)
+			return math.max(-50 * 3 / 2, math.min(45 * 3 / 2, n))
+		end)
+
+		player:hud_change(
+			human_beacon_hud_id,
+			"offset",
+			{ x = human_offset.x - 70 * 3 / 2, y = -human_offset.z - 64 * 3 / 2 }
+		)
+		player:hud_change(human_beacon_hud_id, "scale", { x = human_depth_scalar, y = human_depth_scalar })
+		player:hud_change(
+			alien_beacon_hud_id,
+			"offset",
+			{ x = alien_offset.x - 70 * 3 / 2, y = -alien_offset.z - 64 * 3 / 2 }
+		)
+		player:hud_change(alien_beacon_hud_id, "scale", { x = alien_depth_scalar, y = alien_depth_scalar })
+
+		--Endgame
+		if player:get_pos().y < -500 and not ended then
+			ended = true
+			--blackscreen copied from sd_story
+			player:hud_add({
+				hud_elem_type = "image",
+				position = { x = 0.5, y = 0.5 },
+				name = "sd_beacons:endgame_blackscreen",
+				scale = { x = -100, y = -100 },
+				text = "blank.png^[colorize:#000:255^[noalpha",
+				z_index = 1000,
+			})
+			if a_current_beacon >= 6 and h_current_beacon <= 4 then
+				--Alien Ending
+				story.write_text({
+					player = player,
+					text = "Insert Text for Alien Ending",
+					color = "#FFFFFF",
+					position = { x = 0.5, y = 0.5 },
+					alignment = { x = 0, y = 0 },
+				})
+			elseif h_current_beacon >= 6 and a_current_beacon <= 4 then
+				--Human Ending
+				story.write_text({
+					player = player,
+					text = "Insert Text for Human Ending",
+					color = "#FFFFFF",
+					position = { x = 0.5, y = 0.5 },
+					alignment = { x = 0, y = 0 },
+				})
+			elseif h_current_beacon >= 6 and a_current_beacon >= 6 then
+				--Good Ending
+				story.write_text({
+					player = player,
+					text = "Insert Text for Good Ending",
+					color = "#FFFFFF",
+					position = { x = 0.5, y = 0.5 },
+					alignment = { x = 0, y = 0 },
+				})
+			else
+				--Bad Ending
+				story.write_text({
+					player = player,
+					text = "Insert Text for Bad Ending",
+					color = "#FFFFFF",
+					position = { x = 0.5, y = 0.5 },
+					alignment = { x = 0, y = 0 },
+				})
 			end
 		end
-	end,
-})
+	end
+end)
