@@ -72,6 +72,18 @@ local glowing_variants = {
 	magmatic = { _variants = 4, _add_particlespawner = glowing_dust_particlespawner_adder("magmatic") },
 }
 
+local saturnium_chance = 0.5 -- TODO tweak
+local saturnium_variants = {
+	_variants = 4,
+	on_dig = function(pos, _, digger)
+		if math.random() < saturnium_chance then
+			inv.try_increment_count(digger, "saturnium", 1) -- discard items silently if at max
+		end
+		minetest.remove_node(pos) -- HACK this should not be necessary
+		return true
+	end,
+}
+
 local nodes = {
 	mantle = {
 		groups = { drillable = 1 },
@@ -169,13 +181,13 @@ local nodes = {
 					blue = { _variants = 4 },
 					red = { _variants = 4 },
 					white = { _variants = 4 },
-					saturnium = { _variants = 4 },
+					saturnium = saturnium_variants,
 				},
 			}),
 			grass = plant({
 				_variants = 4,
 				_children = {
-					saturnium = { _variants = 4 },
+					saturnium = saturnium_variants,
 					dry = { _variants = 4 },
 					glowing = {
 						_children = glowing_variants,
@@ -241,7 +253,7 @@ local nodes = {
 			vines = plant({
 				_variants = 4,
 				_children = {
-					saturnium = { _variants = 4 },
+					saturnium = saturnium_variants,
 					dry = { _variants = 4 },
 					glowing = {
 						_children = glowing_variants,
