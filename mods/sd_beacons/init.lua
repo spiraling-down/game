@@ -13,22 +13,23 @@ local alien_beacons = {
 }
 
 local get_beacon_pos = function(beacon_number, beacon_type)
+	local seed
 	if beacon_type == "human" then
-		math.randomseed(minetest.get_mapgen_setting("seed") + beacon_number)
+		seed = minetest.get_mapgen_setting("seed") + beacon_number
 	elseif beacon_type == "alien" then
-		math.randomseed(minetest.get_mapgen_setting("seed") + beacon_number + 100)
+		seed = minetest.get_mapgen_setting("seed") + beacon_number
 	end
+	local random = PcgRandom(seed)
 	--beacons get deeper as you progress
 	return vector.new(
-		math.random(-beacon_spread, beacon_spread),
-		math.random(-beacon_spread / 10 * beacon_number - 50, -beacon_spread / 10 * beacon_number),
-		math.random(-beacon_spread, beacon_spread)
+		random:next(-beacon_spread, beacon_spread),
+		random:next(-beacon_spread / 10 * beacon_number - 50, -beacon_spread / 10 * beacon_number),
+		random:next(-beacon_spread, beacon_spread)
 	)
 end
 
 local get_beacon_type = function(beacon_number)
-	math.randomseed(minetest.get_mapgen_setting("seed") + beacon_number)
-	return math.random(3)
+	return PcgRandom(minetest.get_mapgen_setting("seed") + beacon_number):next(1, 3)
 end
 
 local human_beacon_hud_id = nil
