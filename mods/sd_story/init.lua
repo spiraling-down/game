@@ -79,6 +79,7 @@ local function write_sequence(player, messages, on_complete)
 			end or on_complete,
 			position = { x = 0.5, y = 0.5 },
 			offset = { x = 10, y = 0 },
+			alignment = { x = 1, y = 0 },
 		})
 	end
 	write_text(1)
@@ -143,8 +144,8 @@ minetest.register_globalstep(function(dtime)
 			local chars = calc_chars(text.age)
 			if skip or chars == #text.text and text.age / (chars / chars_per_sec) >= msg_keep_factor then
 				player:hud_remove(text.hud_id)
-				text.on_complete()
 				data.text = nil
+				text.on_complete()
 			elseif prev_chars ~= chars then
 				player:hud_change(text.hud_id, "text", text.text:sub(1, chars))
 			end
