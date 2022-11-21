@@ -232,3 +232,52 @@ minetest.register_chatcommand("mob2", {
 		)
 	end,
 })
+
+minetest.register_lbm({
+	label = "spawn bat",
+	name = "sd_mobs:spawn_bat",
+	nodenames = {
+		"sd_map:granite_frozen_1",
+		"sd_map:granite_frozen_2",
+		"sd_map:granite_frozen_3",
+		"sd_map:granite_frozen_4",
+		"sd_map:granite_semifrozen_1",
+		"sd_map:granite_semifrozen_2",
+		"sd_map:granite_semifrozen_3",
+		"sd_map:granite_semifrozen_4",
+		"sd_map:granite_1",
+		"sd_map:granite_2",
+		"sd_map:granite_3",
+		"sd_map:granite_4",
+		"sd_map:basalt_1",
+		"sd_map:basalt_2",
+		"sd_map:basalt_3",
+		"sd_map:basalt_4",
+		"sd_map:carbon_1",
+		"sd_map:carbon_2",
+		"sd_map:carbon_3",
+		"sd_map:carbon_4",
+	},
+	run_at_every_load = true,
+	action = function(pos, node)
+		--minetest.chat_send_all(minetest.get_node(pos+vector.new(0,1,0)).name)
+		if minetest.get_node(pos + vector.new(0, 1, 0)).name == "air" then
+			if math.random() < 0.001 then
+				minetest.chat_send_all("spawned")
+				minetest.add_entity(
+					pos + vector.new(0, 1, 0),
+					"sd_mobs:basic_mob",
+					minetest.serialize({ mob_type = "bat" })
+				)
+			end
+			if math.random() > 0.999 then
+				minetest.chat_send_all("spawned")
+				minetest.add_entity(
+					pos + vector.new(0, 1, 0),
+					"sd_mobs:basic_mob",
+					minetest.serialize({ mob_type = "mantis" })
+				)
+			end
+		end
+	end,
+})
