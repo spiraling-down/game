@@ -39,7 +39,9 @@ end
 
 local function add_blackscreen(player)
 	-- TODO do some more? (such as revoking interact; care must be taken to restore it properly though)
-	player:set_armor_groups({ immortal = 1 })
+	local armor_groups = player:get_armor_groups()
+	armor_groups.immortal = 1
+	player:set_armor_groups(armor_groups)
 	player:set_physics_override({ speed = 0 })
 	local name = player:get_player_name()
 	local hud_id = player:hud_add({
@@ -66,17 +68,45 @@ local function add_blackscreen(player)
 	})
 end
 
+local function write_sequence(player, messages, on_complete)
+	local function write_text(i)
+		story.write_text({
+			player = player,
+			text = messages[i],
+			color = "green",
+			on_complete = i < #messages and function()
+				write_text(i + 1)
+			end or on_complete,
+			position = { x = 0.5, y = 0.5 },
+			offset = { x = 10, y = 0 },
+		})
+	end
+	write_text(1)
+end
+
 local function remove_blackscreen(player)
 	local name = player:get_player_name()
 	local data = players[name]
 	player:hud_remove(data.blackscreen.hud_id)
 	data.blackscreen = nil
 	start_slides(player, function()
-		if not player:get_pos() then
-			return -- player left
-		end
-		player:set_armor_groups({ immortal = 0 })
-		player:set_physics_override({ speed = 1 })
+		write_sequence(player, {
+			"Let's get you going. As you can see, you have four tools.",
+			"First of all: The acid sprayer. Use this to fend off anything living.",
+			"You will have to craft acid from organics and coal to use it; right-click to reload.",
+			"This brings us to our second tool: The Manipulator.",
+			"It is used to place scaffolding or obtain organics (plants, mushrooms, rubble).",
+			"Your third tool is the drill. Use it to dig iron and coal ores.",
+			"The drill's secondary ability is overcharge mode.",
+			"For overcharge or increasing your mech's life, you need a rare ore called Saturnium.",
+			"It is obtained by using the Manipulator on the right plants, requiring a bit of luck.",
+			"And finally, to bring light into darkness: The lamp placing tool.",
+		}, function()
+			local armor_groups = player:get_armor_groups()
+			armor_groups.immortal = 0
+			player:set_armor_groups(armor_groups)
+			player:set_physics_override({ speed = 1 })
+		end)
 	end)
 end
 

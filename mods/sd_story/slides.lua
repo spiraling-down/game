@@ -97,12 +97,14 @@ local function show_slide(player, i, on_complete)
 
 	local slide_duration = 10 + 0.1 * chars -- 0.5 sec per char
 	local show_next_job = minetest.after(slide_duration, show_slide, player, i + 1, on_complete)
-	fslib.show_formspec(player, fs, function(fields)
+	local callback = function(fields)
 		if fields.quit then -- skip to next slide
 			show_next_job:cancel()
 			show_slide(player, i + 1, on_complete)
 		end
-	end)
+	end
+	fslib.show_formspec(player, fs, callback)
+	minetest.after(0.1, fslib.show_formspec, player, fs, callback) -- HACK stupid Minetest bugses
 end
 
 return function(player, on_complete)
