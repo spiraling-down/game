@@ -6,6 +6,8 @@ local function init(player)
 		visual = "mesh",
 		mesh = "sd_player_mech.obj",
 		textures = { "sd_player_mech.png" },
+		visual_size = vector.new(1, 1, 1), -- HACK,
+		collisionbox = { -0.4, 0, -0.4, 0.4, 1.75, 0.4 },
 	})
 	assert(player:get_properties().hp_max == minetest.PLAYER_MAX_HP_DEFAULT)
 	player:set_armor_groups({ fall_damage_add_percent = -25, fleshy = 100 }) -- reduce fall damage to 75%
