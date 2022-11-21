@@ -25,4 +25,17 @@ minetest.register_on_newplayer(function(player)
 end)
 minetest.register_on_respawnplayer(init)
 
+-- Hurt sound
+minetest.register_on_player_hpchange(function(player, hp_change)
+	if hp_change > 0 then
+		return
+	end
+	minetest.sound_play("sd_player_hurt", {
+		to_player = player:get_player_name(),
+		gain = math.min(1, -hp_change / 2),
+		fade = 0,
+		pitch = 1.0,
+	}, true)
+end)
+
 -- TODO player appearance (mech)

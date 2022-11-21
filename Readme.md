@@ -44,3 +44,5 @@ without needing [a GitHub CI runner](https://github.com/nektos/act).
 * Media: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)
   * Slides (`sd_story_slide_%d.png`) by [Dragoni](https://github.com/DragoniEU/) and edited by [temhotaokeaha](https://github.com/temhotaokeaha)
   * All other textures by [temhotaokeaha](https://github.com/temhotaokeaha)
+  * Sounds:
+    * CC0: [`sd_player_hurt.ogg`](https://freesound.org/people/Rickplayer/sounds/530486/)
