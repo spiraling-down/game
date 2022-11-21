@@ -27,13 +27,50 @@ local function plant(def)
 	})
 end
 
-local function particle_texpool(basename, variants)
-	local texpool = {}
-	for variant = 1, variants do
-		texpool[variant] = ("%s_particle_%s_%d.png"):format(modname, basename, variant)
+local function glowing_dust_particlespawner_adder(name)
+	return function(pos)
+		return minetest.add_particlespawner({
+			amount = 2,
+			time = 0,
+			pos = {
+				min = pos:subtract(0.5),
+				max = pos:add(0.5),
+			},
+			vel = {
+				min = vector.new(-1, 0.5, -1),
+				max = vector.new(1, 2, 1),
+			},
+			drag = 0.75,
+			acc = vector.new(0, -2, 0),
+			size = {},
+			exptime = {
+				min = 1,
+				max = 3,
+			},
+			texpool = {
+				{
+					name = ("%s_particle_glowing_dust_%s_%d.png"):format(modname, name, 1),
+					alpha = 0.3,
+					scale = 1.5,
+					animation = {
+						type = "vertical_frames",
+						aspect_w = 16,
+						aspect_h = 16,
+						length = 3,
+					},
+				},
+			},
+			collisiondetection = true,
+			collision_removal = true,
+		})
 	end
-	return texpool
 end
+
+local glowing_variants = {
+	frozen = { _variants = 4, _add_particlespawner = glowing_dust_particlespawner_adder("frozen") },
+	green = { _variants = 4, _add_particlespawner = glowing_dust_particlespawner_adder("magmatic") },
+	magmatic = { _variants = 4, _add_particlespawner = glowing_dust_particlespawner_adder("magmatic") },
+}
 
 local nodes = {
 	mantle = {
@@ -141,48 +178,14 @@ local nodes = {
 					saturnium = { _variants = 4 },
 					dry = { _variants = 4 },
 					glowing = {
-						_children = {
-							frozen = { _variants = 4 },
-							green = { _variants = 4 },
-							magmatic = {
-								_variants = 4,
-								_add_particlespawner = function(pos)
-									return minetest.add_particlespawner({
-										amount = 10,
-										time = 0,
-										pos = {
-											min = pos:subtract(0.5),
-											max = pos:add(0.5),
-										},
-										vel = {
-											min = vector.new(-1, 0.5, -1),
-											max = vector.new(1, 2, 1),
-										},
-										drag = 0.75,
-										acc = vector.new(0, -2, 0),
-										size = {},
-										exptime = {
-											min = 1,
-											max = 3,
-										},
-										texpool = particle_texpool("smoldering", 4),
-										collisiondetection = true,
-										collision_removal = true,
-									})
-								end,
-							},
-						},
+						_children = glowing_variants,
 					},
 				},
 			}),
 			mushroom = plant({
 				_children = {
 					glowing = {
-						_children = {
-							frozen = { _variants = 4 },
-							green = { _variants = 4 },
-							magmatic = { _variants = 4 },
-						},
+						_children = glowing_variants,
 					},
 				},
 			}),
@@ -241,11 +244,7 @@ local nodes = {
 					saturnium = { _variants = 4 },
 					dry = { _variants = 4 },
 					glowing = {
-						_children = {
-							frozen = { _variants = 4 },
-							green = { _variants = 4 },
-							magmatic = { _variants = 4 },
-						},
+						_children = glowing_variants,
 					},
 				},
 			}),
