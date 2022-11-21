@@ -1,7 +1,7 @@
 local basic_mob = {
-	_attack_distance = 20,
+	_attack_distance = 5,
 	_notice_distance = 20,
-	_punch_interval = 2,
+	_punch_interval = 4,
 	_walk_speed = 3,
 	_attack_type = "guided",
 	_attack_strength = 1,
@@ -42,8 +42,9 @@ local basic_mob = {
 	end,
 
 	on_step = function(self, dtime, moveresult)
-		self._persistent_properties.time_since_last_attack = self._persistent_properties.time_since_last_attack + dtime
-		self._persistent_properties.age = self._persistent_properties.age + dtime
+		self._persistent_properties.time_since_last_attack = self._persistent_properties.time_since_last_attack
+			+ dtime / 100
+		self._persistent_properties.age = self._persistent_properties.age + dtime / 100
 		--Assuming only singleplayer
 		for _, player in pairs(minetest.get_connected_players()) do
 			--Move towards player if close enough
@@ -114,6 +115,7 @@ local basic_mob = {
 							})
 						)
 					end
+					minetest.chat_send_all(self._persistent_properties.time_since_last_attack)
 					self._persistent_properties.time_since_last_attack = 0
 				end
 			else
@@ -141,7 +143,7 @@ end
 --Basic projectile which explodes on impact
 local basic_projectile = {
 	_explode_radius = 3,
-	_explode_strength = 10,
+	_explode_strength = 1,
 	_type = "",
 	_target_player = nil,
 	_speed = 10,
@@ -235,8 +237,8 @@ minetest.register_chatcommand("mob2", {
 })
 
 minetest.register_lbm({
-	label = "spawn bat",
-	name = "sd_mobs:spawn_bat",
+	label = "spawn mobs",
+	name = "sd_mobs:spawn_mobs",
 	nodenames = {
 		"sd_map:granite_frozen_1",
 		"sd_map:granite_frozen_2",
@@ -262,9 +264,8 @@ minetest.register_lbm({
 	run_at_every_load = true,
 	action = function(pos, node)
 		--minetest.chat_send_all(minetest.get_node(pos+vector.new(0,1,0)).name)
-		if minetest.get_node(pos + vector.new(0, 1, 0)).name == "air" then
+		if minetest.get_node(pos + vector.new(0, 1, 0)).name == "air" and pos.y < -50 then
 			if math.random() < 0.001 then
-				minetest.chat_send_all("spawned")
 				minetest.add_entity(
 					pos + vector.new(0, 1, 0),
 					"sd_mobs:basic_mob",
@@ -272,7 +273,6 @@ minetest.register_lbm({
 				)
 			end
 			if math.random() > 0.999 then
-				minetest.chat_send_all("spawned")
 				minetest.add_entity(
 					pos + vector.new(0, 1, 0),
 					"sd_mobs:basic_mob",
