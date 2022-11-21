@@ -17,7 +17,7 @@ local function get_or_init(player)
 		text = "heart.png",
 		text2 = "heart_gone.png",
 		-- NOTE: x2 for full "hearts"
-		number = 2 * minetest.PLAYER_MAX_HP_DEFAULT,
+		number = 2 * player:get_hp(),
 		item = 2 * minetest.PLAYER_MAX_HP_DEFAULT,
 		direction = 0,
 		size = { x = healthbar_w, y = healthbar_h },
