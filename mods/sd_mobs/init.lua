@@ -24,6 +24,7 @@ local basic_mob = {
 	automatic_face_movement_max_rotation_per_sec = 90,
 
 	on_activate = function(self, staticdata, dtime)
+		self.object:set_armor_groups({ acid = 100 })
 		local data = minetest.deserialize(staticdata)
 		if data ~= nil then
 			if data.mob_type == "mantis" then
