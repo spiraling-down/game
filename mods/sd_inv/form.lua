@@ -150,7 +150,7 @@ local function on_inventory_receive_fields(player, fields)
 	else
 		for _, craft in pairs(crafts) do
 			local output = craft.output
-			local count = (fields["craft_one_" .. output] and 1) or (fields["craft_five_" .. output] and 5)
+			local count = (fields["craft_1_" .. output] and 1) or (fields["craft_5_" .. output] and 5)
 			if count then
 				if not (inv.has_capacity(player, output, count) and inv.has_all(player, craft.inputs, count)) then
 					return -- can't craft

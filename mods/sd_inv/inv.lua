@@ -58,6 +58,10 @@ function inv.try_increment_count(player, itemname, increment)
 	return true
 end
 
+function inv.increment_count(player, itemname, increment)
+	return assert(inv.try_increment_count(player, itemname, increment))
+end
+
 function inv.try_decrement_count(player, itemname, decrement)
 	decrement = decrement or 1
 	local count = inv.get_count(player, itemname)
@@ -74,7 +78,7 @@ end
 
 function inv.decrement_all(player, itemnames, decrement)
 	for _, itemname in ipairs(itemnames) do
-		inv.decrement(player, itemname, decrement)
+		inv.decrement_count(player, itemname, decrement)
 	end
 end
 
