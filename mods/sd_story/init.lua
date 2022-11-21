@@ -1,5 +1,7 @@
 story = {}
 
+local start_slides = modlib.mod.require("slides")
+
 local players = {}
 
 local textcolor = laf.colors.text:to_number_rgb()
@@ -67,10 +69,15 @@ end
 local function remove_blackscreen(player)
 	local name = player:get_player_name()
 	local data = players[name]
-	player:set_armor_groups({ immortal = 0 })
-	player:set_physics_override({ speed = 1 })
 	player:hud_remove(data.blackscreen.hud_id)
 	data.blackscreen = nil
+	start_slides(player, function()
+		if not player:get_pos() then
+			return -- player left
+		end
+		player:set_armor_groups({ immortal = 0 })
+		player:set_physics_override({ speed = 1 })
+	end)
 end
 
 local function init(player)
