@@ -53,4 +53,7 @@ without needing [a GitHub CI runner](https://github.com/nektos/act).
       * `sd_map_ambient_basalt_caves.2.ogg`: ["Under The Floor Boards" by HoliznaCC0](https://freemusicarchive.org/music/holiznacc0/beats-from-the-crypt/under-the-floor-boards/)
       * `sd_map_ambient_ending.ogg`: ["Light At The End Of The Tunnel" by "HoliznaCC0"](https://freemusicarchive.org/music/holiznacc0/forager-pt-2/light-at-the-end-of-the-tunnel/)
       * `sd_map_ambient_icy.ogg`: ["Burning In The Atmosphere" by HoliznaCC0](https://freemusicarchive.org/music/holiznacc0/stranger-than-fiction-halloween-sci-fi/burning-in-the-atmosphere/)
-    * CC-BY 4.0: `sd_map_ambient_red_granite.ogg`: ["Birth Of The Sun" (Drone) by Daniel Birch](https://freemusicarchive.org/music/Daniel_Birch/through-the-looking-glass-original-score/birth-of-the-sun-drone/)
+    * CC-BY 4.0:
+      * `sd_map_ambient_red_granite.ogg`: ["Birth Of The Sun" (Drone) by Daniel Birch](https://freemusicarchive.org/music/Daniel_Birch/through-the-looking-glass-original-score/birth-of-the-sun-drone/)
+      * `sd_tools_acid_sprayer.ogg` by Dragoni
+      * `sd_tools_drill.ogg` by Dragoni
