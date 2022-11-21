@@ -8,8 +8,9 @@ local generate_extrusion_mesh = require("generate_extrusion_mesh")
 local modname = minetest.get_current_modname()
 
 local function dig_and_give(name, count)
-	return function(_, _, digger)
+	return function(pos, _, digger)
 		inv.try_increment_count(digger, name, count or 1) -- discard items silently if at max
+		minetest.remove_node(pos) -- HACK this should not be necessary
 		return true
 	end
 end
@@ -19,6 +20,8 @@ local function plant(def)
 		drawtype = "plantlike",
 		paramtype2 = "none", -- "facedir" is not supported
 		groups = { organics = 1 },
+		drop = {},
+		on_dig = dig_and_give("organics", 1),
 		walkable = false,
 		_support = "floor",
 	})
@@ -215,6 +218,8 @@ local nodes = {
 				_drawtype = "plate",
 				_children = {
 					organics = {
+						drop = {},
+						on_dig = dig_and_give("organics", 1),
 						_variants = 4,
 						_children = {
 							dry = { _variants = 4 },

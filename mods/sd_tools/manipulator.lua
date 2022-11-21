@@ -9,6 +9,18 @@ local wear_per_use = math.floor(max_wear / max_uses)
 return register("manipulator", {
 	_recharge_time = 30,
 	description = "Manipulator",
+	tool_capabilities = {
+		max_drop_level = 0,
+		full_punch_interval = 1,
+		groupcaps = {
+			organics = {
+				times = { 0.5, 1, 1.5 },
+				uses = 42, -- doesn't matter
+			},
+		},
+		damage_groups = {},
+	},
+	after_use = function() end, -- don't wear out
 	on_place = function(itemstack, player, pointed_thing)
 		if itemstack:get_wear() + wear_per_use > max_wear then
 			return
@@ -21,5 +33,4 @@ return register("manipulator", {
 		end
 		return itemstack
 	end,
-	-- TODO on_use for digging organics
 })
