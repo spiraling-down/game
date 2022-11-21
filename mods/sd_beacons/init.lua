@@ -17,7 +17,7 @@ local get_beacon_pos = function(beacon_number, beacon_type)
 	if beacon_type == "human" then
 		seed = minetest.get_mapgen_setting("seed") + beacon_number
 	elseif beacon_type == "alien" then
-		seed = minetest.get_mapgen_setting("seed") + beacon_number
+		seed = minetest.get_mapgen_setting("seed") + beacon_number + 100
 	end
 	local random = PcgRandom(seed)
 	--beacons get deeper as you progress
