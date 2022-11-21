@@ -1,3 +1,5 @@
+map = {}
+
 local modname = minetest.get_current_modname()
 
 local require = modlib.mod.require
@@ -117,6 +119,19 @@ function minetest.get_spawn_level(x, z)
 	create_noises()
 	local top_layer = layers[1]
 	return math_max(top_layer.y_top, math_floor(top_layer.y_top + top_layer.noise:get_2d({ x = x, y = z }))) + 0.5
+end
+
+function map.get_layer(pos)
+	create_noises()
+	local xz = { x = pos.x, y = pos.z }
+	local i = 1
+	local layer
+	repeat
+		layer = layers[i]
+		local top = math_floor(layer.y_top + layer.noise:get_2d(xz))
+		i = i + 1
+	until top < pos.y or i == #layers
+	return layer
 end
 
 local tunnel_radius = 2

@@ -1,4 +1,5 @@
 globals = {
+	"map",
 	"layers",
 	"minetest",
 }
