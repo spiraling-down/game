@@ -81,7 +81,6 @@ local basic_mob = {
 				self._persistent_properties.attacking = true
 				if self._persistent_properties.time_since_last_attack > self._punch_interval then
 					if self._attack_type == "melee" then
-						--Why does damage not work?
 						player:punch(
 							self.object,
 							self._persistent_properties.time_since_last_attack,
@@ -191,7 +190,6 @@ local basic_projectile = {
 			--Explode, and damage all objects around
 			for _, object in pairs(minetest.get_objects_inside_radius(self.object:get_pos(), self._explode_radius)) do
 				if minetest.is_player(object) then
-					--Why does damage not work?
 					object:punch(
 						self.object,
 						1,

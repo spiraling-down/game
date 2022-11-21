@@ -4,7 +4,7 @@ local function init(player)
 	player:set_properties({ hp_max = minetest.PLAYER_MAX_HP_DEFAULT })
 	assert(player:get_properties().hp_max == minetest.PLAYER_MAX_HP_DEFAULT)
 	player:set_hp(minetest.PLAYER_MAX_HP_DEFAULT)
-	player:set_armor_groups({ fall_damage_add_percent = -25 }) -- reduce fall damage to 75%
+	player:set_armor_groups({ fall_damage_add_percent = -25, fleshy = 100 }) -- reduce fall damage to 75%
 	player:set_physics_override({ gravity = 0.5, speed = 1.5 })
 	-- TODO what if this isn't persisted?
 	inv.set_count(player, "lamp", 20)
