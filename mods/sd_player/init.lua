@@ -1,7 +1,12 @@
 minetest.PLAYER_MAX_HP_DEFAULT = 10
 
 local function init(player)
-	player:set_properties({ hp_max = minetest.PLAYER_MAX_HP_DEFAULT })
+	player:set_properties({
+		hp_max = minetest.PLAYER_MAX_HP_DEFAULT,
+		visual = "mesh",
+		mesh = "sd_player_mech.obj",
+		textures = { "sd_player_mech.png" },
+	})
 	assert(player:get_properties().hp_max == minetest.PLAYER_MAX_HP_DEFAULT)
 	player:set_armor_groups({ fall_damage_add_percent = -25, fleshy = 100 }) -- reduce fall damage to 75%
 	player:set_physics_override({ gravity = 0.5, speed = 1.5 })
@@ -24,5 +29,3 @@ minetest.register_on_newplayer(function(player)
 	player:set_hp(minetest.PLAYER_MAX_HP_DEFAULT)
 end)
 minetest.register_on_respawnplayer(init)
-
--- TODO player appearance (mech)
