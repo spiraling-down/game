@@ -90,7 +90,7 @@ end
 
 local barrel_length = 1
 local barrel_radius = 0.1
-local spread_radius = 0.2 -- relative to one
+local max_spread_radius = 0.2 -- relative to one
 local min_speed, max_speed = 5, 10
 local min_lifetime, max_lifetime = 2, 3
 local min_droplets_per_sec, max_droplets_per_sec = 10, 30
@@ -106,7 +106,7 @@ local function spray_droplets(player, dtime)
 	end
 	for _ = 1, math.ceil(dtime * math.random(min_droplets_per_sec, max_droplets_per_sec)) do
 		local droplet_pos = barrel_end_pos + offset_from_ray(barrel_radius)
-		local droplet_dir = dir + offset_from_ray(spread_radius)
+		local droplet_dir = dir + offset_from_ray(math.random() * max_spread_radius)
 		local droplet_speed = modlib.math.random(min_speed, max_speed)
 		local droplet_vel = droplet_speed * droplet_dir:normalize()
 		add_droplet(player, droplet_pos, droplet_vel, modlib.math.random(min_lifetime, max_lifetime))
