@@ -2,6 +2,16 @@
 
 A Minetest Game for the 2022 Minetest Game Jam.
 
+## Playing
+
+### [Get it on ContentDB](https://content.minetest.net/sdd/spiraling_down)
+
+### Recommended Specs
+
+* CPU with a PassMark Single Thread Rating of approximately 2000 or more (e.g. [AMD Ryzen 5 3500U](https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+5+3500U&id=3421))
+* At least 2 GB of free RAM
+* About 1 GB of free disk
+
 ## Developing
 
 ### Installation
@@ -30,4 +40,6 @@ without needing [a GitHub CI runner](https://github.com/nektos/act).
 ## License
 
 * Code: [MIT](https://opensource.org/licenses/MIT)
+  * Written by [regulus](https://github.com/regulus79) and [LMD](https://github.com/appgurueu)
 * Media: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)
+  * All textures by [temhotaokeaha](https://github.com/temhotaokeaha)
