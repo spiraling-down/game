@@ -2,7 +2,10 @@ local modname = minetest.get_current_modname()
 
 local require = modlib.mod.require
 
-local nodes, _layers, deco_groups = require("nodes"), require("layers"), require("gen_deco_groups")
+local nodedata = require("nodes")
+local nodes, ore_cids = nodedata.nodes, nodedata.ore_cids
+local _layers = require("layers")
+local deco_groups = require("gen_deco_groups")
 
 local assert, ipairs, pairs = assert, ipairs, pairs
 
@@ -11,7 +14,31 @@ local math_huge, math_min, math_max, math_floor, math_ceil, math_random, math_ra
 
 local vec = vector.new
 
-local minetest_hash_node_position = minetest.hash_node_position
+-- Uses the same v3s16 packing as `minetest.hash_node_position`, but does not need temporary vectors
+
+local function xyz_to_num(x, y, z)
+	return ((z + 0x8000) * 0x10000 + (y + 0x8000)) * 0x10000 + x + 0x8000
+end
+
+local function num_to_xyz(num)
+	local x = num % 0x10000
+	num = (num - x) / 0x10000
+	local y = num % 0x10000
+	num = (num - y) / 0x10000
+	local z = num
+	return x - 0x8000, y - 0x8000, z - 0x8000
+end
+
+for _ = 1, 1e6 do
+	local x = math.random(-0x8000, 0x7FFF)
+	local y = math.random(-0x8000, 0x7FFF)
+	local z = math.random(-0x8000, 0x7FFF)
+	local x2, y2, z2 = num_to_xyz(xyz_to_num(x, y, z))
+	assert(x == x2 and y == y2 and z == z2)
+end
+
+local num_zstride, num_ystride = 0x100000000, 0x10000
+local num_neighbor_offsets = { 1, -1, num_ystride, -num_ystride, num_zstride, -num_zstride }
 
 local c_air = minetest.CONTENT_AIR
 
@@ -95,10 +122,11 @@ end
 local tunnel_radius = 2
 local min_radii, max_radii = vec(10, 5, 10), vec(20, 8, 20)
 local chunk_size = 40 -- TODO this is not optimal due to offsets
-local min_caves_per_chunk = 2
-local max_caves_per_chunk = 4
+local min_caves_per_chunk, max_caves_per_chunk = 2, 4
 local min_deco_grp_density, max_deco_grp_density = 5e-3, 2e-2
 local min_deco_grp_size, max_deco_grp_size = 1, 9
+local min_ore_clusters_per_chunk, max_ore_clusters_per_chunk = 30, 70
+local ore_coal_chance = 0.69
 
 local function seed_random(minp)
 	-- We can't use hash_node_position for this as the randomseed must fit in an int
@@ -111,10 +139,10 @@ local cave_cache = setmetatable({}, { __mode = "k" })
 
 -- Gets the caves for a chunk with the given minp
 --! This changes the current global randomseed
-local function get_caves(minp)
-	local hash = minetest_hash_node_position(minp)
-	if cave_cache[hash] then
-		return cave_cache[hash]
+local function get_chunk_features(minp)
+	local num = xyz_to_num(minp.x, minp.y, minp.z)
+	if cave_cache[num] then
+		return cave_cache[num]
 	end
 
 	seed_random(minp)
@@ -129,8 +157,44 @@ local function get_caves(minp)
 		}
 	end
 
-	cave_cache[hash] = caves
-	return caves
+	local ore_clusters = { coal = {}, iron = {} }
+	for _ = 1, math_random(min_ore_clusters_per_chunk, max_ore_clusters_per_chunk) do
+		local clusters = ore_clusters[math_random() < ore_coal_chance and "coal" or "iron"]
+		local center = minp:combine(maxp, math_random)
+		-- Distribution skewed heavily towards lower-tier ores
+		local max_tier = math_floor((math_random() ^ 4) * 3 + 1.5)
+		local center_num = xyz_to_num(center.x, center.y, center.z)
+		clusters[center_num] = max_tier
+		local last_layer, candidate_list, candidate_set = { center_num }, {}, {}
+		for tier = max_tier, 1, -1 do
+			for i = 1, 6 do
+				local offset = num_neighbor_offsets[i]
+				for j = 1, #last_layer do
+					local ore_num = last_layer[j]
+					local neighbor_num = ore_num + offset
+					if not (clusters[neighbor_num] or candidate_set[neighbor_num]) then
+						candidate_list[#candidate_list + 1] = neighbor_num
+						candidate_set[neighbor_num] = true
+					end
+				end
+			end
+			local layer_size = math_floor((0.5 + 0.5 * math_random()) * #candidate_list + 0.5)
+			last_layer = {}
+			for i = 1, layer_size do
+				local cand_idx = math_random(1, #candidate_list)
+				local ore_num = candidate_list[cand_idx]
+				last_layer[i] = ore_num
+				clusters[ore_num] = tier
+				candidate_set[ore_num] = nil
+				candidate_list[cand_idx] = candidate_list[#candidate_list]
+				candidate_list[#candidate_list] = nil
+			end
+		end
+	end
+
+	local features = { caves = caves, ore_clusters = ore_clusters }
+	cave_cache[num] = features
+	return features
 end
 
 minetest.register_on_generated(function(minp, maxp, blockseed)
@@ -329,44 +393,63 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 		for cy = minchunkp.y, maxchunkp.y, chunk_size do
 			for cx = minchunkp.x, maxchunkp.x, chunk_size do
 				local cp = vec(cx, cy, cz)
-				local caves = get_caves(cp)
-				local nearby_caves = {}
-				for i = 1, #caves do
-					nearby_caves[i] = caves[i]
-				end
-				-- Loop over neighboring chunks and determine their caves
-				for nz = cz - chunk_size, cz + chunk_size, chunk_size do
-					for ny = cy - chunk_size, cy + chunk_size, chunk_size do
-						for nx = cx - chunk_size, cx + chunk_size, chunk_size do
-							if nx + ny + nz ~= 0 then
-								local ncaves = get_caves(vec(nx, ny, nz))
-								for i = 1, #ncaves do -- append all to nearby caves
-									nearby_caves[#nearby_caves + 1] = ncaves[i]
+				local chunk_features = get_chunk_features(cp)
+				do
+					local caves = chunk_features.caves
+					local nearby_caves = {}
+					for i = 1, #caves do
+						nearby_caves[i] = caves[i]
+					end
+					-- Loop over neighboring chunks and determine their caves
+					for nz = cz - chunk_size, cz + chunk_size, chunk_size do
+						for ny = cy - chunk_size, cy + chunk_size, chunk_size do
+							for nx = cx - chunk_size, cx + chunk_size, chunk_size do
+								if nx + ny + nz ~= 0 then
+									local ncaves = get_chunk_features(vec(nx, ny, nz))
+									for i = 1, #ncaves do -- append all to nearby caves
+										nearby_caves[#nearby_caves + 1] = ncaves[i]
+									end
 								end
 							end
 						end
 					end
+					seed_random(cp)
+					for i = 1, #caves do
+						clear_ellipsoid(caves[i].center, caves[i].radii)
+						local cave_blacklist = { [caves[i]] = true }
+						-- Add tunnels to closest caves
+						for _ = 1, math_random(2, 4) do
+							local min_dist, closest_cave = math_huge, nil
+							for j = 1, #nearby_caves do
+								if not cave_blacklist[nearby_caves[j]] then
+									local dist = nearby_caves[j].center:distance(caves[i].center)
+									if dist < min_dist then
+										min_dist, closest_cave = dist, nearby_caves[j]
+									end
+								end
+							end
+							if not closest_cave then
+								break
+							end
+							clear_tunnel(caves[i].center, closest_cave.center, tunnel_radius)
+							cave_blacklist[closest_cave] = true
+						end
+					end
 				end
-				seed_random(cp)
-				for i = 1, #caves do
-					clear_ellipsoid(caves[i].center, caves[i].radii)
-					local cave_blacklist = { [caves[i]] = true }
-					-- Add tunnels to closest caves
-					for _ = 1, math_random(2, 4) do
-						local min_dist, closest_cave = math_huge, nil
-						for j = 1, #nearby_caves do
-							if not cave_blacklist[nearby_caves[j]] then
-								local dist = nearby_caves[j].center:distance(caves[i].center)
-								if dist < min_dist then
-									min_dist, closest_cave = dist, nearby_caves[j]
+				do
+					local ore_clusters = chunk_features.ore_clusters
+					for ore_type, clusters in pairs(ore_clusters) do
+						for num, tier_idx in pairs(clusters) do
+							local x, y, z = num_to_xyz(num)
+							if in_bounds(x, y, z) then
+								local idx = varea:index(x, y, z)
+								local ore_cids_for_node = ore_cids[ore_type][data[idx]]
+								if ore_cids_for_node then
+									assert(ore_cids_for_node[tier_idx], tier_idx)
+									data[idx] = ore_cids_for_node[tier_idx][math_random(#ore_cids_for_node[tier_idx])]
 								end
 							end
 						end
-						if not closest_cave then
-							break
-						end
-						clear_tunnel(caves[i].center, closest_cave.center, tunnel_radius)
-						cave_blacklist[closest_cave] = true
 					end
 				end
 			end
