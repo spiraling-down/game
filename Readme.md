@@ -4,7 +4,7 @@ A Minetest Game for the 2022 Minetest Game Jam.
 
 ## Playing
 
-### [Get it on ContentDB](https://content.minetest.net/sdd/spiraling_down)
+### [Get it on ContentDB](https://content.minetest.net/packages/sdd/spiraling_down)
 
 ### Recommended Specs
 
