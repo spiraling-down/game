@@ -86,6 +86,7 @@ do
 			deco_ceil_groups = preprocess_decos(layer.decorations.ceiling or {}),
 			y_transition = y,
 			y_top = y - (layer.transition or transition),
+			_ = layer
 		}
 		y = y - layer.height
 	end
@@ -131,7 +132,7 @@ function map.get_layer(pos)
 		local top = math_floor(layer.y_top + layer.noise:get_2d(xz))
 		i = i + 1
 	until top < pos.y or i == #layers
-	return layer
+	return layer._
 end
 
 local tunnel_radius = 2

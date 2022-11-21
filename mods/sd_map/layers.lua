@@ -1,6 +1,10 @@
 -- NOTE: `transition = n` is supported but currently unused;
 -- problematic groups have been outcommented
 -- TODO: Use `weather`, `inclusions`
+local function ambient_sound(name)
+	return "sd_map_ambient_" .. name
+end
+
 layers = {
 	{
 		name = "Near Absolute Zero",
@@ -9,6 +13,7 @@ layers = {
 		node = "mantle",
 		inclusions = {},
 		decorations = {},
+		sound = ambient_sound("intro"),
 	},
 	{
 		name = "Glacial Howl",
@@ -28,6 +33,7 @@ layers = {
 				-- "icicle_ceiling",
 			},
 		},
+		sound = ambient_sound("icy"),
 	},
 	{
 		name = "Defrosting",
@@ -47,6 +53,7 @@ layers = {
 				-- "icicle_ceiling",
 			},
 		},
+		sound = ambient_sound("icy"),
 	},
 	{
 		name = "Room Temperature",
@@ -65,6 +72,7 @@ layers = {
 				"vines_dry",
 			},
 		},
+		sound = ambient_sound("red_granite"),
 	},
 	{
 		name = "Getting Hotter",
@@ -86,6 +94,7 @@ layers = {
 				"vines_glowing_green",
 			},
 		},
+		sound = ambient_sound("red_granite"),
 	},
 	{
 		name = "Getting (even) Hotter",
@@ -111,6 +120,7 @@ layers = {
 				"vines",
 			},
 		},
+		sound = ambient_sound("red_granite"),
 	},
 	{
 		name = "Volcanic Roar",
@@ -136,6 +146,7 @@ layers = {
 				"vines",
 			},
 		},
+		sound = ambient_sound("red_granite"),
 	},
 	{
 		name = "Ominous Murals",
@@ -144,6 +155,7 @@ layers = {
 		node = "carbon",
 		inclusions = {},
 		decorations = {},
+		sound = ambient_sound("ending"),
 	},
 	{
 		name = "Kernel",
@@ -152,6 +164,7 @@ layers = {
 		node = "carbon",
 		inclusions = {},
 		decorations = {},
+		sound = ambient_sound("ending"),
 	},
 }
 
