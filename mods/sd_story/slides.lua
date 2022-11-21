@@ -59,7 +59,7 @@ local slide_lines = {
 		"After a long flight, you finally",
 		"arrived on Enceladus' surface.",
 		"Command Center starts broad-",
-		"casting it's briefing as you're",
+		"casting its briefing as you're",
 		"heading towards a cave entrance.",
 	},
 }
