@@ -102,11 +102,12 @@ local function remove_blackscreen(player)
 			"It is obtained by using the Manipulator on the right plants, requiring a bit of luck.",
 			"And finally, to bring light into darkness: The lamp placing tool.",
 		}, function()
-			local armor_groups = player:get_armor_groups()
-			armor_groups.immortal = 0
-			player:set_armor_groups(armor_groups)
-			player:set_physics_override({ speed = 1 })
+			player:get_meta():set_int("sd_story_tutorial_completed", 1)
 		end)
+		local armor_groups = player:get_armor_groups()
+		armor_groups.immortal = 0
+		player:set_armor_groups(armor_groups)
+		player:set_physics_override({ speed = 1 })
 	end)
 end
 
@@ -115,13 +116,12 @@ local function init(player)
 	players[name] = players[name] or {}
 end
 
--- Start with blackscreen
-minetest.register_on_newplayer(function(player)
+minetest.register_on_joinplayer(function(player)
 	init(player)
-	add_blackscreen(player)
+	if player:get_meta():get_int("sd_story_tutorial_completed") == 0 then
+		add_blackscreen(player) -- starts tutorial
+	end
 end)
-
-minetest.register_on_joinplayer(init)
 
 minetest.register_on_leaveplayer(function(player)
 	players[player:get_player_name()] = nil
