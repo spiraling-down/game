@@ -28,6 +28,12 @@ itemname = register("drill", {
 		},
 		damage_groups = {},
 	},
+	sound = {
+		punch_use = {
+			name = "sd_tools_drill",
+			gain = 0.5,
+		},
+	},
 	after_use = function() end, -- don't wear out
 	on_place = on_secondary_use,
 	on_secondary_use = on_secondary_use,
@@ -136,6 +142,9 @@ end)
 itemname_overcharged = register("drill_overcharged", {
 	description = "Overcharged Drill",
 	tool_capabilities = overcharged_tool_caps,
+	sound = {
+		punch_use = "sd_tools_drill",
+	},
 	after_use = function() end, -- don't wear out
 	_deplete_time = 6,
 	_on_deplete = function(itemstack, player)
