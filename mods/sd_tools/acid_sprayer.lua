@@ -155,7 +155,11 @@ local name = register("acid_sprayer", {
 		local name = user:get_player_name()
 		if wear_required < wear_left then
 			handle[name] = handle[name]
-				or minetest.sound_play("sd_tools_acid_sprayer", { to_player = user, gain = 0.5 }, false)
+				or minetest.sound_play(
+					"sd_tools_acid_sprayer",
+					{ to_player = user:get_player_name(), gain = 0.5 },
+					false
+				)
 			spray_droplets(user, dtime)
 			itemstack:add_wear(wear_required)
 		elseif handle[name] then
