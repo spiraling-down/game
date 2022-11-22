@@ -269,43 +269,45 @@ minetest.register_globalstep(function()
 				text = "blank.png^[colorize:#000:255^[noalpha",
 				z_index = 1000,
 			})
+			local messages
 			if a_current_beacon >= 6 and h_current_beacon <= 4 then
-				--Alien Ending
-				story.write_text({
-					player = player,
-					text = "Insert Text for Alien Ending",
-					color = "#FFFFFF",
-					position = { x = 0.5, y = 0.5 },
-					alignment = { x = 0, y = 0 },
-				})
+				-- Alien Ending
+				messages = {
+					"You become a part of Life on Enceladus.",
+					"You can feel the Saturnium flowing through your veins.",
+					"You feel the power, yet you are immobilized.",
+					"It appears likely to you that you will forever remain in this state.",
+				}
 			elseif h_current_beacon >= 6 and a_current_beacon <= 4 then
-				--Human Ending
-				story.write_text({
-					player = player,
-					text = "Insert Text for Human Ending",
-					color = "#FFFFFF",
-					position = { x = 0.5, y = 0.5 },
-					alignment = { x = 0, y = 0 },
-				})
+				-- Human Ending
+				messages = {
+					"The command center calls you.",
+					"Your investigation of the beacons has allowed them to...",
+					"... determine the right frequency to trigger a resonance catastrophe.",
+					"Life on Enceladus no longer poses a threat to humanity.",
+				}
 			elseif h_current_beacon >= 6 and a_current_beacon >= 6 then
-				--Good Ending
-				story.write_text({
-					player = player,
-					text = "Insert Text for Good Ending",
-					color = "#FFFFFF",
-					position = { x = 0.5, y = 0.5 },
-					alignment = { x = 0, y = 0 },
-				})
+				-- Good Ending
+				messages = {
+					"You feel you are not alone in your head.",
+					"Is this a telepathical connection?",
+					'"You are the first of your kind to understand me. What is it that you desire?"',
+					'"That which you call lives of your specimen?"',
+					'"It shall be restored."',
+					"Suddenly, the command center calls:",
+					"Multiple signals of human life forms have been registered on the surface of Enceladus.",
+				}
 			else
-				--Bad Ending
-				story.write_text({
-					player = player,
-					text = "Insert Text for Bad Ending",
-					color = "#FFFFFF",
-					position = { x = 0.5, y = 0.5 },
-					alignment = { x = 0, y = 0 },
-				})
+				-- Bad Ending
+				messages = {
+					"Out of nowhere, a strong force shakes your mech and body alike.",
+					"Something tells you that you might have descended too far too early.",
+					"You find the same fate as the astronauts before you.",
+				}
 			end
+			story.write_text_sequence(player, messages, function()
+				minetest.kick_player(player:get_player_name(), "Congratulations! You completed the game.")
+			end)
 		end
 	end
 end)
