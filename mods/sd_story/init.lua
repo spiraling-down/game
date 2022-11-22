@@ -77,7 +77,7 @@ function story.write_text_sequence(player, messages, on_complete)
 			on_complete = i < #messages and function()
 				write_text(i + 1)
 			end or on_complete,
-			position = { x = 0.5, y = 0.5 },
+			position = { x = 0, y = 0.5 },
 			offset = { x = 10, y = 0 },
 			alignment = { x = 1, y = 0 },
 		})
