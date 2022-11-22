@@ -136,6 +136,8 @@ local function on_secondary_use(itemstack, user)
 	end
 end
 
+local handle = {}
+
 local name = register("acid_sprayer", {
 	description = "Acid Sprayer",
 	range = 0,
@@ -150,15 +152,33 @@ local name = register("acid_sprayer", {
 		end
 		local wear_required = math.floor(max_wear * (dtime / use_duration))
 		local wear_left = max_wear - itemstack:get_wear()
+		local name = user:get_player_name()
 		if wear_required < wear_left then
+			handle[name] = handle[name]
+				or minetest.sound_play("sd_tools_acid_sprayer", { to_player = user, gain = 0.5 }, false)
 			spray_droplets(user, dtime)
 			itemstack:add_wear(wear_required)
+		elseif handle[name] then
+			minetest.sound_fade(handle[name], 10, 0)
+			handle[name] = nil
 		end
 		return itemstack
 	end,
 	_can_recharge = is_recharging,
 	_recharge_time = use_duration * 2,
 })
+
+minetest.register_globalstep(function()
+	for player in modlib.minetest.connected_players() do
+		if player:get_wielded_item():get_name() ~= name or not player:get_player_control().dig then
+			local pname = player:get_player_name()
+			if handle[pname] then
+				minetest.sound_fade(handle[pname], 10, 0)
+				handle[pname] = nil
+			end
+		end
+	end
+end)
 
 local stack = ItemStack(name)
 stack:set_wear(max_wear)

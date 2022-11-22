@@ -86,7 +86,7 @@ do
 			deco_ceil_groups = preprocess_decos(layer.decorations.ceiling or {}),
 			y_transition = y,
 			y_top = y - (layer.transition or transition),
-			_ = layer
+			_ = layer,
 		}
 		y = y - layer.height
 	end
