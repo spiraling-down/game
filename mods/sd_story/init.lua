@@ -68,7 +68,7 @@ local function add_blackscreen(player)
 	})
 end
 
-local function write_sequence(player, messages, on_complete)
+function story.write_text_sequence(player, messages, on_complete)
 	local function write_text(i)
 		story.write_text({
 			player = player,
@@ -91,7 +91,7 @@ local function remove_blackscreen(player)
 	player:hud_remove(data.blackscreen.hud_id)
 	data.blackscreen = nil
 	start_slides(player, function()
-		write_sequence(player, {
+		story.write_text_sequence(player, {
 			"Let's get you going. As you can see, you have four tools.",
 			"First of all: The acid sprayer. Use this to fend off anything living.",
 			"You will have to craft acid from organics and coal to use it; right-click to reload.",
