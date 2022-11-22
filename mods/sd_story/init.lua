@@ -102,6 +102,7 @@ local function remove_blackscreen(player)
 			"For overcharge or increasing your mech's life, you need a rare ore called Saturnium.",
 			"It is obtained by using the Manipulator on the right plants, requiring a bit of luck.",
 			"And finally, to bring light into darkness: The lamp placing tool.",
+			"Your mission is to investigate the sources of radiation on your radar. Good luck!",
 		}, function()
 			player:get_meta():set_int("sd_story_tutorial_completed", 1)
 		end)
