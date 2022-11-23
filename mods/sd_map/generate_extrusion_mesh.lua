@@ -1,6 +1,6 @@
 -- TODO refactor
 return function(texname, meshname)
-	local texfile = assert(io.open(assert(modlib.minetest.media.paths[texname], texname), "r"))
+	local texfile = assert(io.open(assert(modlib.minetest.media.paths[texname], texname), "rb"))
 	local png = modlib.minetest.decode_png(texfile)
 	texfile:close()
 	modlib.minetest.convert_png_to_argb8(png)
