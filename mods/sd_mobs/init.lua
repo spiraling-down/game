@@ -1,3 +1,5 @@
+local max_count_by_chunk = modlib.mod.require("max_count_by_chunk")
+
 local basic_mob = {
 	_attack_distance = 10,
 	_notice_distance = 20,
@@ -24,6 +26,10 @@ local basic_mob = {
 	automatic_face_movement_max_rotation_per_sec = 90,
 
 	on_activate = function(self, staticdata)
+		-- Population control
+		max_count_by_chunk.increment(self.object:get_pos())
+		self._prev_pos = self.object:get_pos()
+		-- Initialization
 		self.object:set_armor_groups({ acid = 100 })
 		local data = minetest.deserialize(staticdata)
 		if data ~= nil then
@@ -42,22 +48,29 @@ local basic_mob = {
 		end
 	end,
 
+	on_deactivate = function(self)
+		max_count_by_chunk.decrement(self.object:get_pos())
+	end,
+
 	on_step = function(self, dtime)
+		local pos = self.object:get_pos()
+		-- Population control
+		max_count_by_chunk.move(self._prev_pos, pos)
+		self._prev_pos = pos
+		-- Actual mob logic
 		self._persistent_properties.time_since_last_attack = self._persistent_properties.time_since_last_attack
 			+ dtime / 100
 		self._persistent_properties.age = self._persistent_properties.age + dtime / 100
 		--Assuming only singleplayer
 		for _, player in pairs(minetest.get_connected_players()) do
 			--Move towards player if close enough
-			local dir = self.object:get_pos():direction(player:get_pos())
-			if player:get_pos():distance(self.object:get_pos()) < self._notice_distance then
+			local dir = pos:direction(player:get_pos())
+			if player:get_pos():distance(pos) < self._notice_distance then
 				local oldvel = self.object:get_velocity()
 				self.object:set_velocity(vector.new(dir.x * self._walk_speed, oldvel.y, dir.z * self._walk_speed))
 			end
 			if self._movement_type == "bat" then
-				self.object:add_velocity(
-					vector.new(0, (self.object:get_pos():direction(player:get_pos() + vector.new(0, 2, 0))).y, 0)
-				)
+				self.object:add_velocity(vector.new(0, (pos:direction(player:get_pos() + vector.new(0, 2, 0))).y, 0))
 			elseif self._movement_type == "walk" then
 				local prop = self.object:get_properties()
 				if dir:dot(self.object:get_velocity()) > 0.7 then
@@ -96,20 +109,20 @@ local basic_mob = {
 						)
 					elseif self._attack_type == "ballistic" then
 						minetest.add_entity(
-							self.object:get_pos(),
+							pos,
 							"sd_mobs:basic_projectile",
 							minetest.serialize({
-								offset = player:get_pos() - self.object:get_pos(),
+								offset = player:get_pos() - pos,
 								explode_strength = self._attack_strength,
 								type = "ballistic",
 							})
 						)
 					elseif self._attack_type == "guided" then
 						minetest.add_entity(
-							self.object:get_pos(),
+							pos,
 							"sd_mobs:basic_projectile",
 							minetest.serialize({
-								offset = player:get_pos() - self.object:get_pos(),
+								offset = player:get_pos() - pos,
 								explode_strength = self._attack_strength,
 								type = "guided",
 								target_player_name = player:get_player_name(), --minetest cannot serialize userdata, so send name instead
@@ -117,10 +130,10 @@ local basic_mob = {
 						)
 					elseif self._attack_type == "straight" then
 						minetest.add_entity(
-							self.object:get_pos(),
+							pos,
 							"sd_mobs:basic_projectile",
 							minetest.serialize({
-								offset = player:get_pos() - self.object:get_pos(),
+								offset = player:get_pos() - pos,
 								explode_strength = self._attack_strength,
 								type = "straight",
 								target_player_name = player:get_player_name(), --minetest cannot serialize userdata, so send name instead
@@ -198,12 +211,13 @@ local basic_projectile = {
 	end,
 
 	on_step = function(self, _, moveresult)
+		local pos = self.object:get_pos()
 		if self._type == "guided" then
-			self.object:set_velocity((self.object:get_pos():direction(self._target_player:get_pos())) * self._speed)
+			self.object:set_velocity((pos:direction(self._target_player:get_pos())) * self._speed)
 		end
 		if moveresult.collides then
 			--Explode, and damage all objects around
-			for _, object in pairs(minetest.get_objects_inside_radius(self.object:get_pos(), self._explode_radius)) do
+			for _, object in pairs(minetest.get_objects_inside_radius(pos, self._explode_radius)) do
 				if minetest.is_player(object) then
 					object:punch(
 						self.object,
@@ -251,6 +265,7 @@ minetest.register_chatcommand("mob2", {
 minetest.register_lbm({
 	label = "spawn mobs",
 	name = "sd_mobs:spawn_mobs",
+	-- TODO use groups instead
 	nodenames = {
 		"sd_map:granite_frozen_1",
 		"sd_map:granite_frozen_2",
@@ -275,22 +290,16 @@ minetest.register_lbm({
 	},
 	run_at_every_load = true,
 	action = function(pos)
-		--minetest.chat_send_all(minetest.get_node(pos+vector.new(0,1,0)).name)
-		if minetest.get_node(pos + vector.new(0, 1, 0)).name == "air" and pos.y < -100 then
-			if math.random() < 0.001 then
-				minetest.add_entity(
-					pos + vector.new(0, 1, 0),
-					"sd_mobs:basic_mob",
-					minetest.serialize({ mob_type = "bat" })
-				)
-			end
-			if math.random() > 0.999 then
-				minetest.add_entity(
-					pos + vector.new(0, 1, 0),
-					"sd_mobs:basic_mob",
-					minetest.serialize({ mob_type = "mantis" })
-				)
-			end
+		if pos.y >= -100 or math.random() > 2e-3 then
+			return
+		end
+		local pos_above = pos:offset(0, 1, 0)
+		if minetest.get_node(pos_above).name == "air" and max_count_by_chunk.can_increment(pos_above) then
+			minetest.add_entity(
+				pos_above,
+				"sd_mobs:basic_mob",
+				minetest.serialize({ mob_type = math.random() < 0.5 and "bat" or "mantis" })
+			)
 		end
 	end,
 })
