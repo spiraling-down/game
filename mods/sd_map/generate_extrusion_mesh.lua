@@ -56,13 +56,13 @@ return function(texname, meshname)
 	-- Write normals
 	-- TODO get rid of this by getting winding order right
 	f:write([[
-	vn -1 0 0
-	vn 1 0 0
-	vn 0 -1 0
-	vn 0 1 0
-	vn 0 0 -1
-	vn 0 0 1
-	]])
+vn -1 0 0
+vn 1 0 0
+vn 0 -1 0
+vn 0 1 0
+vn 0 0 -1
+vn 0 0 1
+]])
 
 	-- Write faces
 
