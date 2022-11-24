@@ -21,33 +21,37 @@ return function(texname, meshname)
 
 	-- Write vertices
 
-	local function vidx(x, y, z)
-		return y * (res + 1) ^ 2 + x * (res + 1) + z + 1
-	end
-
-	for y = 0, 1 do
-		for x = 0, res do
-			for z = 0, res do
-				-- NOTE: x is flipped due to handedness
-				f:write(("v %f %f %f\n"):format(-(x / res - 0.5), y * (1 / res) - 0.5, z / res - 0.5))
-			end
+	local vidx = {}
+	local cur_vidx = 0
+	local function get_vidx(x, y, z)
+		local idx = y * (res + 1) ^ 2 + x * (res + 1) + z + 1
+		if vidx[idx] then
+			return vidx[idx]
 		end
+		-- Write vertex on demand
+		-- NOTE: x is flipped due to handedness
+		f:write(("v %f %f %f\n"):format(-(x / res - 0.5), y * (1 / res) - 0.5, z / res - 0.5))
+		cur_vidx = cur_vidx + 1
+		vidx[idx] = cur_vidx
+		return cur_vidx
 	end
 
 	-- Write texcoords
 
-	local function vtidx(x, z)
-		return x * (res + 1) + z + 1
-	end
-
-	for x = 0, res do
-		for z = 0, res do
-			-- NOTE: y (z) is flipped due to handedness
-			f:write(("vt %f %f\n"):format(x / res, -z / res))
+	local vtidx = {}
+	local cur_vtidx = 0
+	local function get_vtidx(x, z)
+		local idx = x * (res + 1) + z + 1
+		if vtidx[idx] then
+			return vtidx[idx]
 		end
+		-- Write texcoord on demand
+		-- NOTE: y (z) is flipped due to handedness
+		f:write(("vt %f %f\n"):format(x / res, -z / res))
+		cur_vtidx = cur_vtidx + 1
+		vtidx[idx] = cur_vtidx
+		return cur_vtidx
 	end
-
-	-- TODO optimize vertex & texcoord writing by dropping unused vertices / texcoords
 
 	-- Write normals
 	-- TODO get rid of this by getting winding order right
@@ -87,8 +91,8 @@ return function(texname, meshname)
 
 	for y = 0, 1 do
 		add_quad(
-			{ vidx(0, y, 0), vidx(0, y, 16), vidx(16, y, 0), vidx(16, y, 16) },
-			{ vtidx(0, 0), vtidx(0, 16), vtidx(16, 0), vtidx(16, 16) },
+			{ get_vidx(0, y, 0), get_vidx(0, y, 16), get_vidx(16, y, 0), get_vidx(16, y, 16) },
+			{ get_vtidx(0, 0), get_vtidx(0, 16), get_vtidx(16, 0), get_vtidx(16, 16) },
 			y + 1
 		)
 	end
@@ -96,26 +100,36 @@ return function(texname, meshname)
 	for x = 0, res - 1 do
 		for z = 0, res - 1 do
 			if not is_transparent(x, z) then
-				local uv = { vtidx(x, z), vtidx(x, z + 1), vtidx(x + 1, z), vtidx(x + 1, z + 1) }
+				local uv = { get_vtidx(x, z), get_vtidx(x, z + 1), get_vtidx(x + 1, z), get_vtidx(x + 1, z + 1) }
 				if is_transparent(x, z + 1) then
-					add_quad(
-						{ vidx(x, 0, z + 1), vidx(x + 1, 0, z + 1), vidx(x, 1, z + 1), vidx(x + 1, 1, z + 1) },
-						uv,
-						6
-					)
+					add_quad({
+						get_vidx(x, 0, z + 1),
+						get_vidx(x + 1, 0, z + 1),
+						get_vidx(x, 1, z + 1),
+						get_vidx(x + 1, 1, z + 1),
+					}, uv, 6)
 				end
 				if is_transparent(x, z - 1) then
-					add_quad({ vidx(x, 0, z), vidx(x, 1, z), vidx(x + 1, 0, z), vidx(x + 1, 1, z) }, uv, 5)
-				end
-				if is_transparent(x + 1, z) then
 					add_quad(
-						{ vidx(x + 1, 0, z), vidx(x + 1, 1, z), vidx(x + 1, 0, z + 1), vidx(x + 1, 1, z + 1) },
+						{ get_vidx(x, 0, z), get_vidx(x, 1, z), get_vidx(x + 1, 0, z), get_vidx(x + 1, 1, z) },
 						uv,
-						4
+						5
 					)
 				end
+				if is_transparent(x + 1, z) then
+					add_quad({
+						get_vidx(x + 1, 0, z),
+						get_vidx(x + 1, 1, z),
+						get_vidx(x + 1, 0, z + 1),
+						get_vidx(x + 1, 1, z + 1),
+					}, uv, 4)
+				end
 				if is_transparent(x - 1, z) then
-					add_quad({ vidx(x, 0, z), vidx(x, 1, z), vidx(x, 0, z + 1), vidx(x, 1, z + 1) }, uv, 3)
+					add_quad(
+						{ get_vidx(x, 0, z), get_vidx(x, 1, z), get_vidx(x, 0, z + 1), get_vidx(x, 1, z + 1) },
+						uv,
+						3
+					)
 				end
 			end
 		end
