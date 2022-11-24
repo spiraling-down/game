@@ -64,7 +64,7 @@ local advance_to_next_beacon = function(current_beacon, beacon_type)
 			spawn_beacon(current_beacon + 1, "alien")
 		end
 		--Getting the grammar correct
-		a_or_an = "a"
+		local a_or_an = "a"
 		if beacon_type == "alien" then
 			a_or_an = "an"
 		end
@@ -83,7 +83,7 @@ minetest.register_node("sd_beacons:human_regular", {
 	description = "",
 	tiles = { "sd_beacons_human_regular.png" },
 	groups = { drillable = 2 },
-	on_dig = function(pos, node, digger)
+	on_dig = function(pos, _, digger)
 		local meta = digger:get_meta()
 		advance_to_next_beacon(meta:get_int("h_current_beacon"), "human")
 		minetest.set_node(pos, { name = "air" })
@@ -94,7 +94,7 @@ minetest.register_node("sd_beacons:human_frozen", {
 	description = "",
 	tiles = { "sd_beacons_human_frozen.png" },
 	groups = { drillable = 2 },
-	on_dig = function(pos, node, digger)
+	on_dig = function(pos, _, digger)
 		local meta = digger:get_meta()
 		advance_to_next_beacon(meta:get_int("h_current_beacon"), "human")
 		minetest.set_node(pos, { name = "air" })
@@ -105,7 +105,7 @@ minetest.register_node("sd_beacons:human_red", {
 	description = "",
 	tiles = { "sd_beacons_human_red.png" },
 	groups = { drillable = 2 },
-	on_dig = function(pos, node, digger)
+	on_dig = function(pos, _, digger)
 		local meta = digger:get_meta()
 		advance_to_next_beacon(meta:get_int("h_current_beacon"), "human")
 		minetest.set_node(pos, { name = "air" })
@@ -117,7 +117,7 @@ minetest.register_node("sd_beacons:alien_regular", {
 	description = "",
 	tiles = { "sd_beacons_alien_regular.png" },
 	groups = { drillable = 2 },
-	on_dig = function(pos, node, digger)
+	on_dig = function(pos, _, digger)
 		local meta = digger:get_meta()
 		advance_to_next_beacon(meta:get_int("a_current_beacon"), "alien")
 		minetest.set_node(pos, { name = "air" })
@@ -128,7 +128,7 @@ minetest.register_node("sd_beacons:alien_frozen", {
 	description = "",
 	tiles = { "sd_beacons_alien_frozen.png" },
 	groups = { drillable = 2 },
-	on_dig = function(pos, node, digger)
+	on_dig = function(pos, _, digger)
 		local meta = digger:get_meta()
 		advance_to_next_beacon(meta:get_int("a_current_beacon"), "alien")
 		minetest.set_node(pos, { name = "air" })
@@ -139,7 +139,7 @@ minetest.register_node("sd_beacons:alien_red", {
 	description = "",
 	tiles = { "sd_beacons_alien_red.png" },
 	groups = { drillable = 2 },
-	on_dig = function(pos, node, digger)
+	on_dig = function(pos, _, digger)
 		local meta = digger:get_meta()
 		advance_to_next_beacon(meta:get_int("a_current_beacon"), "alien")
 		minetest.set_node(pos, { name = "air" })

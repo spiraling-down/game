@@ -23,7 +23,7 @@ local basic_mob = {
 	automatic_face_movement_dir = 0.0,
 	automatic_face_movement_max_rotation_per_sec = 90,
 
-	on_activate = function(self, staticdata, dtime)
+	on_activate = function(self, staticdata)
 		self.object:set_armor_groups({ acid = 100 })
 		local data = minetest.deserialize(staticdata)
 		if data ~= nil then
@@ -37,13 +37,12 @@ local basic_mob = {
 				prop.collisionbox = { 1, 1, 1, -1, -1, -1 }
 				prop.visual_size = vector.new(2, 2, 2)
 				self.object:set_properties(prop)
-			elseif data.mob_type == "bat" then
-				--Use defaults
 			end
+			-- HACK bat uses defaults
 		end
 	end,
 
-	on_step = function(self, dtime, moveresult)
+	on_step = function(self, dtime)
 		self._persistent_properties.time_since_last_attack = self._persistent_properties.time_since_last_attack
 			+ dtime / 100
 		self._persistent_properties.age = self._persistent_properties.age + dtime / 100
@@ -130,8 +129,6 @@ local basic_mob = {
 					end
 					self._persistent_properties.time_since_last_attack = 0
 				end
-			else
-				--self._persistent_properties.attacking=false
 			end
 		end
 	end,
@@ -167,7 +164,7 @@ local basic_projectile = {
 	visual = "sprite", --Temporary visual
 	textures = { "sd_tools_acid_sprayer_droplet_1.png" }, --Temporary texture
 
-	on_activate = function(self, staticdata, dtime)
+	on_activate = function(self, staticdata)
 		self._particlespawner_id = minetest.add_particlespawner({
 			amount = 10,
 			time = 1,
@@ -200,7 +197,7 @@ local basic_projectile = {
 		end
 	end,
 
-	on_step = function(self, dtime, moveresult)
+	on_step = function(self, _, moveresult)
 		if self._type == "guided" then
 			self.object:set_velocity((self.object:get_pos():direction(self._target_player:get_pos())) * self._speed)
 		end
@@ -231,7 +228,7 @@ minetest.register_entity("sd_mobs:basic_mob", basic_mob)
 --Only for testing purposes
 minetest.register_chatcommand("mob", {
 	description = "",
-	func = function(name, params)
+	func = function(name)
 		minetest.add_entity(
 			minetest.get_player_by_name(name):get_pos(),
 			"sd_mobs:basic_mob",
@@ -242,7 +239,7 @@ minetest.register_chatcommand("mob", {
 
 minetest.register_chatcommand("mob2", {
 	description = "",
-	func = function(name, params)
+	func = function(name)
 		minetest.add_entity(
 			minetest.get_player_by_name(name):get_pos(),
 			"sd_mobs:basic_mob",
@@ -277,7 +274,7 @@ minetest.register_lbm({
 		"sd_map:carbon_4",
 	},
 	run_at_every_load = true,
-	action = function(pos, node)
+	action = function(pos)
 		--minetest.chat_send_all(minetest.get_node(pos+vector.new(0,1,0)).name)
 		if minetest.get_node(pos + vector.new(0, 1, 0)).name == "air" and pos.y < -100 then
 			if math.random() < 0.001 then
