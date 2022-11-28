@@ -10,7 +10,10 @@ local modname = minetest.get_current_modname()
 local function dig_and_give(name, count)
 	return function(pos, _, digger)
 		inv.try_increment_count(digger, name, count or 1) -- discard items silently if at max
-		minetest.remove_node(pos) -- HACK this should not be necessary
+		-- HACK this should not be necessary
+		local oldnode = minetest.get_node(pos)
+		minetest.remove_node(pos)
+		modlib.table.icall(minetest.registered_on_dignodes, pos, oldnode, digger)
 		return true
 	end
 end
