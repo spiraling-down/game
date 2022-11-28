@@ -12,7 +12,12 @@ local function init(player)
 	assert(player:get_properties().hp_max == minetest.PLAYER_MAX_HP_DEFAULT)
 	player:set_armor_groups({ fall_damage_add_percent = -25, fleshy = 100 }) -- reduce fall damage to 75%
 	player:set_physics_override({ gravity = 0.5, speed = 1.5 })
-	-- TODO what if this isn't persisted?
+end
+
+local function restore(player)
+	-- Reset HP
+	player:set_hp(minetest.PLAYER_MAX_HP_DEFAULT)
+	-- Give initial items
 	inv.set_count(player, "lamp", 20)
 	inv.set_count(player, "steel", 30)
 end
@@ -28,6 +33,9 @@ minetest.register_on_newplayer(function(player)
 		inventory:set_size("craftresult", 0)
 	end
 	init(player)
-	player:set_hp(minetest.PLAYER_MAX_HP_DEFAULT)
+	restore(player)
 end)
-minetest.register_on_respawnplayer(init)
+minetest.register_on_respawnplayer(function(player)
+	init(player)
+	restore(player)
+end)
