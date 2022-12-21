@@ -512,14 +512,16 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 					for y = bottom, top do
 						local next_y_index = y_index + ystride
 						-- NOTE: Require y < top such that there always is one block of margin for neighbor calculations
-						if data[next_y_index] == c_air and data[y_index] ~= c_air and y < top then
-							local list_i = #floor_list + 1
-							floor_map[next_y_index] = list_i
-							floor_list[list_i] = next_y_index
-						elseif data[next_y_index] ~= c_air and data[y_index] == c_air then
-							local list_i = #ceil_list + 1
-							ceil_map[y_index] = list_i
-							ceil_list[list_i] = y_index
+						if y < top then
+							if data[next_y_index] == c_air and data[y_index] ~= c_air then
+								local list_i = #floor_list + 1
+								floor_map[next_y_index] = list_i
+								floor_list[list_i] = next_y_index
+							elseif data[next_y_index] ~= c_air and data[y_index] == c_air then
+								local list_i = #ceil_list + 1
+								ceil_map[y_index] = list_i
+								ceil_list[list_i] = y_index
+							end
 						end
 						y_index = next_y_index -- y++
 					end
