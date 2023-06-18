@@ -1,4 +1,4 @@
-modlib.mod.require("gen")
+modlib.mod.require("genparent")
 
 local function reposition_player_for_spawn(player)
 	local x, z = 0, 0

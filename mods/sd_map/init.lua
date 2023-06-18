@@ -1,4 +1,4 @@
 local require = modlib.mod.require
-require("gen")
+require("genparent")
 require("spawn")
 require("ambience")

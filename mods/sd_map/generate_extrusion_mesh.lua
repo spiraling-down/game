@@ -97,7 +97,64 @@ vn 0 0 1
 		)
 	end
 
+	-- TODO merge multiple adjacent faces
 	for x = 0, res - 1 do
+		local function add_quads(cx, px, nidx)
+			local z = 0
+			while z < res do
+				local minz = z
+				while is_transparent(cx, z) and not is_transparent(x, z) do
+					z = z + 1
+				end
+				local v = {
+					get_vidx(px, 0, minz),
+					get_vidx(px, 1, minz),
+					get_vidx(px, 0, z),
+					get_vidx(px, 1, z),
+				}
+				local uv = {
+					get_vtidx(x, minz),
+					get_vtidx(px, minz),
+					get_vtidx(x, z),
+					get_vtidx(px, z),
+				}
+				add_quad(v, uv, nidx)
+				z = z + 1
+			end
+		end
+		add_quads(x - 1, x, 3)
+		add_quads(x + 1, x + 1, 4)
+	end
+
+	--[[for z = 0, res - 1 do
+		local function add_quads(cz, pz, nidx)
+			local x = 0
+			while x < res do
+				local minx = x
+				while is_transparent(x, cz) and not is_transparent(x, z) do
+					x = x + 1
+				end
+				local v = {
+					get_vidx(minx, 0, pz),
+					get_vidx(minx, 1, pz),
+					get_vidx(x, 0, pz),
+					get_vidx(x, 1, pz),
+				}
+				local uv = {
+					get_vtidx(minx, z),
+					get_vtidx(minx, pz),
+					get_vtidx(x, z),
+					get_vtidx(x, pz),
+				}
+				add_quad(v, uv, nidx)
+				x = x + 1
+			end
+		end
+		add_quads(z - 1, z, 5)
+		add_quads(z + 1, z + 1, 6)
+	end]]
+
+	--[[for x = 0, res - 1 do
 		for z = 0, res - 1 do
 			if not is_transparent(x, z) then
 				local uv = { get_vtidx(x, z), get_vtidx(x, z + 1), get_vtidx(x + 1, z), get_vtidx(x + 1, z + 1) }
@@ -133,7 +190,7 @@ vn 0 0 1
 				end
 			end
 		end
-	end
+	end]]
 	f:close()
 
 	return res

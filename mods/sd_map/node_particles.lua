@@ -59,6 +59,7 @@ modlib.minetest.register_globalstep(timer, function()
 end)
 
 minetest.register_on_dignode(function(pos)
+	minetest.chat_send_all("dug!")
 	local id = particlespawners[minetest.hash_node_position(pos)]
 	if id then
 		minetest.delete_particlespawner(id)

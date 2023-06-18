@@ -1,13 +1,66 @@
-map = {}
+-- *Invasive* extensions of Minetest's builtin vectors. We are allowed to do this as we are a game.
+
+do
+	local ceil = math.ceil
+	function vector:ceil()
+		return self:apply(ceil)
+	end
+end
+
+do
+	local abs = math.abs
+	-- Lookup tables for other components given a least significant component
+	local c1 = { x = "y", y = "z", z = "x" }
+	local c2 = { x = "z", y = "x", z = "y" }
+	-- Constructs an orthonormal base given a normal vector of a 2d plane
+	function vector.construct_orthonormal_base(normal)
+		normal = normal:normalize() -- safety net
+		local lsc = "x" -- least significant component
+		for c, val in next, normal, lsc do
+			if abs(val) < abs(normal[lsc]) then
+				lsc = c
+			end
+		end
+		local msc1, msc2 = c1[lsc], c2[lsc]
+		local b1 = normal:copy()
+		b1[lsc] = 0 -- zero the least significant component
+		-- Swap most significant components & flip one.
+		-- Assuming z is the lsc: n * b1 = nx * ny + ny * -nx = 0
+		b1[msc1], b1[msc2] = b1[msc2], -b1[msc1]
+		b1:normalize()
+		-- Now we may find a second orthogonal vector using the cross product.
+		local b2 = b1:cross(normal)
+		return b1, b2
+	end
+end
+
+
+assert(not modlib)
 
 local modname = minetest.get_current_modname()
 
-local require = modlib.mod.require
+local stuff = minetest.registered_items["sd_map:stuff"]._
 
-local nodedata = require("nodes")
+local nodedata = stuff.nodedata
+local _layers = stuff.layers
+local deco_groups = stuff.deco_groups
+
 local nodes, ore_cids = nodedata.nodes, nodedata.ore_cids
-local _layers = require("layers")
-local deco_groups = require("gen_deco_groups")
+
+-- Simply copy-pasting this from modlib is less work for now (I think?)
+local function memoize(func)
+	return setmetatable({}, {
+		__index = function(self, key)
+			local value = func(key)
+			self[key] = value
+			return value
+		end,
+		__call = function(self, arg)
+			return self[arg]
+		end,
+		__mode = "k"
+	})
+end
 
 local assert, ipairs, pairs = assert, ipairs, pairs
 
@@ -31,10 +84,11 @@ local function num_to_xyz(num)
 	return x - 0x8000, y - 0x8000, z - 0x8000
 end
 
+-- TODO get rid of these tests?
 for _ = 1, 1e6 do
-	local x = math.random(-0x8000, 0x7FFF)
-	local y = math.random(-0x8000, 0x7FFF)
-	local z = math.random(-0x8000, 0x7FFF)
+	local x = math_random(-0x8000, 0x7FFF)
+	local y = math_random(-0x8000, 0x7FFF)
+	local z = math_random(-0x8000, 0x7FFF)
 	local x2, y2, z2 = num_to_xyz(xyz_to_num(x, y, z))
 	assert(x == x2 and y == y2 and z == z2)
 end
@@ -44,7 +98,7 @@ local num_neighbor_offsets = { 1, -1, num_ystride, -num_ystride, num_zstride, -n
 
 local c_air = minetest.CONTENT_AIR
 
-local variant_cids_by_nodename = modlib.func.memoize(function(nodename)
+local variant_cids_by_nodename = memoize(function(nodename)
 	local cids = {}
 	for variant = 1, assert(nodes[nodename], nodename)._variants do
 		cids[variant] = minetest.get_content_id(("%s:%s_%d"):format(modname, nodename, variant))
@@ -54,7 +108,7 @@ local variant_cids_by_nodename = modlib.func.memoize(function(nodename)
 end)
 
 -- Build list of weighted choices; choices may appear multiple times according to their weight
-local nodename_choices_by_group = modlib.func.memoize(function(group)
+local nodename_choices_by_group = memoize(function(group)
 	local list = {}
 	for nodename, count in pairs(assert(deco_groups[group], group)) do
 		local _ = variant_cids_by_nodename["deco_" .. nodename] -- initialize cids
@@ -102,15 +156,15 @@ local function create_noises()
 	for _, layer in ipairs(layers) do
 		-- Each transition between two layers needs its own noise
 		-- TODO fully deal with incorrect assumption that the perlin noise was in the [0, scale) range
-		layer.noise = assert(minetest.get_perlin({
+		layer.noise = assert(PerlinNoise{
 			offset = 0,
 			scale = layer.y_transition - layer.y_top,
 			spread = vec(50, 50, 50),
-			seed = 42,
+			seed = minetest.get_mapgen_setting"seed" + 42,
 			octaves = 5,
 			persistence = 0.5,
 			lacunarity = 2.0,
-		}))
+		})
 	end
 	noises_created = true
 end
@@ -120,19 +174,6 @@ function minetest.get_spawn_level(x, z)
 	create_noises()
 	local top_layer = layers[1]
 	return math_max(top_layer.y_top, math_floor(top_layer.y_top + top_layer.noise:get_2d({ x = x, y = z }))) + 0.5
-end
-
-function map.get_layer(pos)
-	create_noises()
-	local xz = { x = pos.x, y = pos.z }
-	local i = 1
-	local layer
-	repeat
-		layer = layers[i]
-		local top = math_floor(layer.y_top + layer.noise:get_2d(xz))
-		i = i + 1
-	until top < pos.y or i == #layers
-	return layer._
 end
 
 local tunnel_radius = 2
@@ -213,7 +254,10 @@ local function get_chunk_features(minp)
 	return features
 end
 
-minetest.register_on_generated(function(minp, maxp, blockseed)
+minetest.register_on_generated(function(vmanip, blockseed)
+	local mt = getmetatable(vmanip)
+	assert(mt.get_emerged_area, dump(mt))
+	local minp, maxp = mt.get_emerged_area(vmanip)
 	local y_top, y_bottom = maxp.y, minp.y
 
 	if layers[1].y_transition < y_bottom then
@@ -293,7 +337,7 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 		local sqx, sqy, sqz = 1 / (rx * rx), 1 / (ry * ry), 1 / (rz * rz)
 		-- Compute extents of the cuboid fully containing the sphere
 		local cuboid_min = center:subtract(radii):floor():combine(minp, math_max)
-		local cuboid_max = center:add(radii):ceil():combine(maxp, math_min)
+		local cuboid_max = center:add(radii):apply(math.ceil):combine(maxp, math_min)
 
 		local z_idx = varea:indexp(cuboid_min)
 		for relz = cuboid_min.z - cz, cuboid_max.z - cz do
@@ -404,7 +448,7 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 	-- NOTE: subtract/add one to deal with caves of neighboring chunks, which might extend into our chunk
 	-- TODO consider throwing in a few random tunnels
 	local minchunkp = minp:divide(chunk_size):floor():subtract(1):multiply(chunk_size)
-	local maxchunkp = maxp:divide(chunk_size):ceil():add(1):multiply(chunk_size)
+	local maxchunkp = maxp:divide(chunk_size):apply(math.ceil):add(1):multiply(chunk_size)
 	for cz = minchunkp.z, maxchunkp.z, chunk_size do
 		for cy = minchunkp.y, maxchunkp.y, chunk_size do
 			for cx = minchunkp.x, maxchunkp.x, chunk_size do
