@@ -16,6 +16,9 @@ local function s(vec2)
 end
 
 local function letter(char)
+	if char == " " then
+		return "blank.png"
+	end
 	local index = ({
 		["."] = 31,
 		[","] = 32,
