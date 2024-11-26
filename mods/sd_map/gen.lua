@@ -185,6 +185,8 @@ local function get_chunk_features(minp)
 	return features
 end
 
+local data, param2_data = {}, {} -- reuse tables to avoid wasteful allocations
+
 minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
 	local y_top, y_bottom = maxp.y, minp.y
 
@@ -200,8 +202,11 @@ minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
 	local emin, emax = vmanip:get_emerged_area()
 	local varea = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
 	local ystride, zstride = varea.ystride, varea.zstride
-	local data = vmanip:get_data()
-	local param2_data = vmanip:get_param2_data()
+	-- Localize the upvalues for these hot tables for the rest of the function
+	-- luacheck: push ignore 431
+	local data = vmanip:get_data(data)
+	local param2_data = vmanip:get_param2_data(param2_data)
+	-- luacheck: pop
 	assert(#data ~= 0 and #param2_data ~= 0)
 
 	-- Determine the slice of layers applying to this mapblock using two linear searches:
