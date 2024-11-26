@@ -168,4 +168,13 @@ layers = {
 	},
 }
 
+-- Populate y_transition and y_top fields
+local transition = 10
+local y = 10
+for _, layer in ipairs(layers) do
+	layer.y_transition = y
+	layer.y_top = y - (layer.transition or transition)
+	y = y - layer.height
+end
+
 return layers

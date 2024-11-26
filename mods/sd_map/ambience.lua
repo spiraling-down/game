@@ -1,11 +1,27 @@
 -- Ambience Sounds, played according to the current layer
+local layers = modlib.mod.require("layers")
+local gen_common = modlib.mod.require("gen_common")
+
 local players = modlib.minetest.playerdata()
+
+local function get_layer(pos)
+	gen_common.create_noises(layers)
+	local xz = { x = pos.x, y = pos.z }
+	local i = 1
+	local layer
+	repeat
+		layer = layers[i]
+		local top = math.floor(layer.y_top + layer.noise:get_2d(xz))
+		i = i + 1
+	until top < pos.y or i == #layers
+	return layer._
+end
 
 minetest.register_globalstep(function()
 	for player in modlib.minetest.connected_players() do
 		local name = player:get_player_name()
 		local data = players[name]
-		local layer = map.get_layer(vector.offset(player:get_pos(), 0, player:get_properties().eye_height, 0))
+		local layer = get_layer(vector.offset(player:get_pos(), 0, player:get_properties().eye_height, 0))
 		if data.last_layer ~= layer then
 			if data.layer_text_hud_id then
 				player:hud_change(data.layer_text_hud_id, "text", layer.name)

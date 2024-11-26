@@ -1,10 +1,12 @@
 # Spiraling Down
 
-A Minetest Game for the 2022 Minetest Game Jam.
+A Luanti Game for the 2022 Luanti (then Minetest) Game Jam.
 
 ## Playing
 
 ### [Get it on ContentDB](https://content.minetest.net/packages/sdd/spiraling_down)
+
+Requires Luanti 5.10.0.
 
 ### Recommended Specs
 

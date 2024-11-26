@@ -2,12 +2,9 @@ map = {}
 
 local modname = minetest.get_current_modname()
 
-local require = modlib.mod.require
+local mgdata = assert(minetest.ipc_get("mapgen_data"))
 
-local nodedata = require("nodes")
-local nodes, ore_cids = nodedata.nodes, nodedata.ore_cids
-local _layers = require("layers")
-local deco_groups = require("gen_deco_groups")
+local nodes, ore_cids, _layers, deco_groups = mgdata.nodes, mgdata.ore_cids, mgdata.layers, mgdata.deco_groups
 
 local assert, ipairs, pairs = assert, ipairs, pairs
 
@@ -15,6 +12,11 @@ local math_huge, math_min, math_max, math_floor, math_ceil, math_random, math_ra
 	math.huge, math.min, math.max, math.floor, math.ceil, math.random, math.randomseed
 
 local vec = vector.new
+
+-- HACK reinitialize vector extensions we depend on in the async mapgen env
+dofile(minetest.get_modpath("sd_vec_ext") .. "/init.lua")
+
+local gen_common = dofile(minetest.get_modpath(modname) .. "/gen_common.lua")
 
 -- Uses the same v3s16 packing as `minetest.hash_node_position`, but does not need temporary vectors
 
@@ -44,7 +46,23 @@ local num_neighbor_offsets = { 1, -1, num_ystride, -num_ystride, num_zstride, -n
 
 local c_air = minetest.CONTENT_AIR
 
-local variant_cids_by_nodename = modlib.func.memoize(function(nodename)
+-- HACK duplicate of `modlib.func.memoize`
+-- TODO (?) get rid of memoization, build tables eagerly instead
+local function memoize(func)
+	return setmetatable({}, {
+		__index = function(self, key)
+			local value = func(key)
+			self[key] = value
+			return value
+		end,
+		__call = function(self, arg)
+			return self[arg]
+		end,
+		__mode = "k",
+	})
+end
+
+local variant_cids_by_nodename = memoize(function(nodename)
 	local cids = {}
 	for variant = 1, assert(nodes[nodename], nodename)._variants do
 		cids[variant] = minetest.get_content_id(("%s:%s_%d"):format(modname, nodename, variant))
@@ -54,7 +72,7 @@ local variant_cids_by_nodename = modlib.func.memoize(function(nodename)
 end)
 
 -- Build list of weighted choices; choices may appear multiple times according to their weight
-local nodename_choices_by_group = modlib.func.memoize(function(group)
+local nodename_choices_by_group = memoize(function(group)
 	local list = {}
 	for nodename, count in pairs(assert(deco_groups[group], group)) do
 		local _ = variant_cids_by_nodename["deco_" .. nodename] -- initialize cids
@@ -77,62 +95,16 @@ end
 -- Layer preprocessing for generation
 local layers = {}
 do
-	local transition = 10
-	local y = 10
 	for i, layer in ipairs(_layers) do
 		layers[i] = {
 			cids = variant_cids_by_nodename[layer.node],
 			deco_floor_groups = preprocess_decos(layer.decorations.floor or {}),
 			deco_ceil_groups = preprocess_decos(layer.decorations.ceiling or {}),
-			y_transition = y,
-			y_top = y - (layer.transition or transition),
+			y_transition = layer.y_transition,
+			y_top = layer.y_top,
 			_ = layer,
 		}
-		y = y - layer.height
 	end
-end
-
--- HACK Minetest does not allow noise creation at load time it seems
--- lazily creates noises (ahead-of-time is not possible)
-local noises_created = false
-local function create_noises()
-	if noises_created then
-		return
-	end
-	for _, layer in ipairs(layers) do
-		-- Each transition between two layers needs its own noise
-		-- TODO fully deal with incorrect assumption that the perlin noise was in the [0, scale) range
-		layer.noise = assert(minetest.get_perlin({
-			offset = 0,
-			scale = layer.y_transition - layer.y_top,
-			spread = vec(50, 50, 50),
-			seed = 42,
-			octaves = 5,
-			persistence = 0.5,
-			lacunarity = 2.0,
-		}))
-	end
-	noises_created = true
-end
-
--- TODO this doesn't take tunnels & caves intersecting the top layer into account
-function minetest.get_spawn_level(x, z)
-	create_noises()
-	local top_layer = layers[1]
-	return math_max(top_layer.y_top, math_floor(top_layer.y_top + top_layer.noise:get_2d({ x = x, y = z }))) + 0.5
-end
-
-function map.get_layer(pos)
-	create_noises()
-	local xz = { x = pos.x, y = pos.z }
-	local i = 1
-	local layer
-	repeat
-		layer = layers[i]
-		local top = math_floor(layer.y_top + layer.noise:get_2d(xz))
-		i = i + 1
-	until top < pos.y or i == #layers
-	return layer._
 end
 
 local tunnel_radius = 2
@@ -213,19 +185,18 @@ local function get_chunk_features(minp)
 	return features
 end
 
-minetest.register_on_generated(function(minp, maxp, blockseed)
+minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
 	local y_top, y_bottom = maxp.y, minp.y
 
 	if layers[1].y_transition < y_bottom then
 		return -- only air
 	end
 
-	create_noises()
+	gen_common.create_noises(layers)
 
 	-- Read
 	local reseed = math_random(2 ^ 31 - 1) -- generate seed for reseeding
 	math_randomseed(blockseed) -- seed random for this chunk
-	local vmanip = minetest.get_mapgen_object("voxelmanip")
 	local emin, emax = vmanip:get_emerged_area()
 	local varea = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
 	local ystride, zstride = varea.ystride, varea.zstride
@@ -601,6 +572,5 @@ minetest.register_on_generated(function(minp, maxp, blockseed)
 	-- Write
 	vmanip:set_data(data)
 	vmanip:set_param2_data(param2_data)
-	vmanip:write_to_map()
 	math_randomseed(reseed) -- reseed the random
 end)
