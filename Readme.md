@@ -6,7 +6,7 @@ A Luanti Game for the 2022 Luanti (then Minetest) Game Jam.
 
 ### [Get it on ContentDB](https://content.minetest.net/packages/sdd/spiraling_down)
 
-Requires Luanti 5.10.0.
+Requires Luanti 5.10.0; should only be used with LuaJIT.
 
 ### Recommended Specs
 
